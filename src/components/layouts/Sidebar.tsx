@@ -1,23 +1,30 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useLogout } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
-import { useLogout } from "@/hooks/useAuth";
 import {
-  LayoutDashboard, FolderKanban, FileSpreadsheet,
-  ShoppingCart, Package, HardHat, FileText,
-  DollarSign, LogOut, Building2, Settings,
+  Building2,
+  DollarSign,
+  FileSpreadsheet,
+  FileText,
+  FolderKanban,
+  HardHat,
+  LayoutDashboard,
+  LogOut,
+  Package,
+  ShoppingCart
 } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const navItems = [
   { label: "Overview", href: "/overview", icon: LayoutDashboard },
   { label: "Projects", href: "/projects", icon: FolderKanban },
   { label: "BOQ & Estimation", href: "/boq", icon: FileSpreadsheet },
-  { label: "Procurement", href: "/procurement", icon: ShoppingCart, soon: true },
-  { label: "Inventory", href: "/inventory", icon: Package, soon: true },
-  { label: "Site Operations", href: "/site-ops", icon: HardHat, soon: true },
+  { label: "Procurement", href: "/procurement", icon: ShoppingCart },
+  { label: "Inventory", href: "/inventory", icon: Package },
+  { label: "Site Operations", href: "/site-ops", icon: HardHat },
   { label: "Documents", href: "/documents", icon: FileText, soon: true },
   { label: "Finance", href: "/finance", icon: DollarSign, soon: true },
 ];
@@ -72,6 +79,29 @@ export function Sidebar() {
           })}
         </ul>
       </nav>
+      {/* Admin section — only for superadmin */}
+    {user?.is_superadmin && (
+      <>
+        <div className="mx-3 my-2 border-t border-gray-200" />
+        <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+          Super Admin
+        </p>
+        <li>
+          <Link
+            href="/admin/tenants"
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+              pathname.startsWith("/admin")
+                ? "bg-red-50 text-red-700 font-medium"
+                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            )}
+          >
+            <Building2 className="h-4 w-4 flex-shrink-0" />
+            Tenant Management
+          </Link>
+        </li>
+      </>
+    )}
 
       {/* User footer */}
       <div className="border-t border-gray-200 p-3">
