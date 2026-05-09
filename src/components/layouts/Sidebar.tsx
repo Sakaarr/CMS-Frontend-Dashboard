@@ -25,8 +25,8 @@ const navItems = [
   { label: "Procurement", href: "/procurement", icon: ShoppingCart },
   { label: "Inventory", href: "/inventory", icon: Package },
   { label: "Site Operations", href: "/site-ops", icon: HardHat },
+  { label: "Finance", href: "/finance", icon: DollarSign },
   { label: "Documents", href: "/documents", icon: FileText, soon: true },
-  { label: "Finance", href: "/finance", icon: DollarSign, soon: true },
 ];
 
 export function Sidebar() {
