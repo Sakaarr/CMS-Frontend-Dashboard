@@ -1,13 +1,15 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { User } from "@/types";
 
 interface AuthState {
   user: User | null;
   tenantSlug: string | null;
   isAuthenticated: boolean;
+  _hasHydrated: boolean;
   setAuth: (user: User, tenantSlug: string) => void;
   logout: () => void;
+  setHasHydrated: (val: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -16,6 +18,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       tenantSlug: null,
       isAuthenticated: false,
+      _hasHydrated: false,
       setAuth: (user, tenantSlug) => {
         set({ user, tenantSlug, isAuthenticated: true });
         localStorage.setItem("tenant_slug", tenantSlug);
@@ -26,7 +29,14 @@ export const useAuthStore = create<AuthState>()(
         localStorage.removeItem("refresh_token");
         localStorage.removeItem("tenant_slug");
       },
+      setHasHydrated: (val) => set({ _hasHydrated: val }),
     }),
-    { name: "cms-auth" }
+    {
+      name: "cms-auth",
+      storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
+    }
   )
 );

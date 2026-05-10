@@ -1,26 +1,47 @@
 @import "tailwindcss";
 
+/* ── Theme tokens ─────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --sidebar-width: 16rem;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --border-color: #e5e7eb;
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #374151;
+  --sidebar-active-bg: #eff6ff;
+  --sidebar-active-text: #1d4ed8;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+.dark {
+  --bg-primary: #111827;
+  --bg-secondary: #1f2937;
+  --bg-tertiary: #0f172a;
+  --text-primary: #f9fafb;
+  --text-secondary: #9ca3af;
+  --text-tertiary: #6b7280;
+  --border-color: #374151;
+  --sidebar-bg: #111827;
+  --sidebar-text: #d1d5db;
+  --sidebar-active-bg: #1e3a5f;
+  --sidebar-active-text: #93c5fd;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Dark mode — Tailwind v4 way ──────────────────────────────── */
+@variant dark (&:where(.dark, .dark *));
+
+/* ── Smooth theme transitions ─────────────────────────────────── */
+*, *::before, *::after {
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ── Scrollbar ────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 99px;
 }
