@@ -7,6 +7,9 @@ import { useLogin } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Building2 } from "lucide-react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/auth.store";
 
 const loginSchema = z.object({
   tenant_slug: z.string().min(1, "Organisation slug is required"),
@@ -17,6 +20,13 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
+  const router = useRouter();
+  useEffect(() => {
+    if (_hasHydrated && isAuthenticated) {
+      router.replace("/overview");
+    }
+  }, [isAuthenticated, _hasHydrated, router]);
   const login = useLogin();
   const {
     register,
