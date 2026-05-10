@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   LogOut,
   Package,
+  ShieldCheck,
   ShoppingCart
 } from "lucide-react";
 import Link from "next/link";
@@ -26,10 +27,10 @@ const navItems = [
   { label: "Inventory", href: "/inventory", icon: Package },
   { label: "Site Operations", href: "/site-ops", icon: HardHat },
   { label: "Finance", href: "/finance", icon: DollarSign },
-  { label: "Documents", href: "/quality", icon: FileText },
+  { label: "Quality", href: "/quality", icon: ShieldCheck },
   // If you want to add more sections in the future, just add them here with the appropriate icon and href and add soon: true if it's not ready yet. Example:
   // { label: "HR & Payroll", href: "/hr", icon: User, soon: true },
-  // { label: "Documents", href: "/documents", icon: FileText, soon: true },
+  { label: "Documents", href: "/documents", icon: FileText},
 
 ];
 
