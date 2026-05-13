@@ -39,8 +39,8 @@ export default function ProjectsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Projects</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {data?.total ?? 0} projects total
           </p>
         </div>
@@ -52,9 +52,9 @@ export default function ProjectsPage() {
       {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
           <input
-            className="h-10 w-full rounded-lg border border-gray-300 bg-white pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="h-10 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 pl-9 pr-4 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             placeholder="Search projects..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -68,7 +68,7 @@ export default function ProjectsPage() {
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                 status === f.value
                   ? "bg-blue-600 text-white"
-                  : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+                  : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
               }`}
             >
               {f.label}
@@ -79,9 +79,9 @@ export default function ProjectsPage() {
 
       {/* Create form */}
       {showCreate && (
-        <Card>
+        <Card className="dark:bg-gray-900 dark:border-gray-800">
           <CardContent className="pt-6">
-            <h2 className="mb-4 text-base font-semibold text-gray-900">
+            <h2 className="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">
               New project
             </h2>
             <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4">
@@ -101,11 +101,11 @@ export default function ProjectsPage() {
       )}
 
       {/* Table */}
-      <Card>
+      <Card className="dark:bg-gray-900 dark:border-gray-800">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+              <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 <th className="px-6 py-3">Project</th>
                 <th className="px-6 py-3">Status</th>
                 <th className="px-6 py-3">Progress</th>
@@ -114,47 +114,47 @@ export default function ProjectsPage() {
                 <th className="px-6 py-3">End date</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {isLoading ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center">
-                    <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400" />
+                    <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400 dark:text-gray-500" />
                   </td>
                 </tr>
               ) : data?.data.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-gray-400">
+                  <td colSpan={6} className="py-12 text-center text-gray-400 dark:text-gray-500">
                     No projects found
                   </td>
                 </tr>
               ) : (
                 data?.data.map((project) => (
-                  <tr key={project.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={project.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                     <td className="px-6 py-4">
-                      <Link href={`/projects/${project.id}`} className="hover:text-blue-600">
-                        <p className="font-medium text-gray-900">{project.name}</p>
-                        <p className="text-xs text-gray-500">{project.code} · {project.city ?? "—"}</p>
+                      <Link href={`/projects/${project.id}`} className="hover:text-blue-600 dark:hover:text-blue-400">
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{project.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{project.code} · {project.city ?? "—"}</p>
                       </Link>
                     </td>
                     <td className="px-6 py-4"><Badge status={project.status} /></td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <div className="h-1.5 w-24 rounded-full bg-gray-200">
+                        <div className="h-1.5 w-24 rounded-full bg-gray-200 dark:bg-gray-700">
                           <div
                             className="h-1.5 rounded-full bg-blue-500"
                             style={{ width: `${project.progress_percentage}%` }}
                           />
                         </div>
-                        <span className="text-xs text-gray-500">{project.progress_percentage}%</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{project.progress_percentage}%</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-700">
+                    <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
                       {project.estimated_budget
                         ? formatCurrency(project.estimated_budget, project.currency)
                         : "—"}
                     </td>
-                    <td className="px-6 py-4 text-gray-600">{formatDate(project.planned_start_date)}</td>
-                    <td className="px-6 py-4 text-gray-600">{formatDate(project.planned_end_date)}</td>
+                    <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{formatDate(project.planned_start_date)}</td>
+                    <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{formatDate(project.planned_end_date)}</td>
                   </tr>
                 ))
               )}
