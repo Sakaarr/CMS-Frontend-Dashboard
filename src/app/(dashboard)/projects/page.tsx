@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useProjects, useCreateProject } from "@/hooks/useProjects";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { useCreateProject, useProjects } from "@/hooks/useProjects";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Plus, Search, Loader2 } from "lucide-react";
+import { Loader2, Plus, Search } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 const STATUS_FILTERS = [
@@ -79,26 +78,56 @@ export default function ProjectsPage() {
 
       {/* Create form */}
       {showCreate && (
-        <Card className="dark:bg-gray-900 dark:border-gray-800">
-          <CardContent className="pt-6">
-            <h2 className="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">
-              New project
-            </h2>
-            <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4">
-              <Input label="Project name" placeholder="Kathmandu Office Block" {...register("name", { required: true })} />
-              <Input label="Project code" placeholder="PRJ-001" {...register("code", { required: true })} />
-              <Input label="Client name" placeholder="Client Ltd" {...register("client_name")} />
-              <Input label="City" placeholder="Kathmandu" {...register("city")} />
-              <Input label="Estimated budget (NPR)" type="number" placeholder="5000000" {...register("estimated_budget", { valueAsNumber: true })} />
-              <Input label="Planned start date" type="date" {...register("planned_start_date")} />
-              <div className="col-span-2 flex justify-end gap-2">
-                <Button variant="outline" type="button" onClick={() => setShowCreate(false)}>Cancel</Button>
-                <Button type="submit" loading={createProject.isPending}>Create project</Button>
+      <Card className="dark:bg-gray-900 dark:border-gray-800">
+        <CardContent className="pt-6">
+          <h2 className="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">
+            New project
+          </h2>
+          <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4">
+            {/* Reusable field wrapper */}
+            {[
+              { label: "Project name", placeholder: "Kathmandu Office Block", key: "name", required: true },
+              { label: "Project code", placeholder: "PRJ-001", key: "code", required: true },
+              { label: "Client name", placeholder: "Client Ltd", key: "client_name" },
+              { label: "City", placeholder: "Kathmandu", key: "city" },
+            ].map(({ label, placeholder, key, required }) => (
+              <div key={key} className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300">{label}</label>
+                <input
+                  placeholder={placeholder}
+                  className="h-9 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                  {...register(key, { required })}
+                />
               </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+            ))}
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Estimated budget (NPR)</label>
+              <input
+                type="number"
+                placeholder="5000000"
+                className="h-9 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                {...register("estimated_budget", { valueAsNumber: true })}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Planned start date</label>
+              <input
+                type="date"
+                className="h-9 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-gray-100 [color-scheme:light] dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                {...register("planned_start_date")}
+              />
+            </div>
+
+            <div className="col-span-2 flex justify-end gap-2">
+              <Button variant="outline" type="button" onClick={() => setShowCreate(false)}>Cancel</Button>
+              <Button type="submit" loading={createProject.isPending}>Create project</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    )}
 
       {/* Table */}
       <Card className="dark:bg-gray-900 dark:border-gray-800">
