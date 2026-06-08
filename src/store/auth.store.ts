@@ -28,6 +28,7 @@ export const useAuthStore = create<AuthState>()(
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
         localStorage.removeItem("tenant_slug");
+        localStorage.removeItem("cms-permissions");
       },
       setHasHydrated: (val) => set({ _hasHydrated: val }),
     }),

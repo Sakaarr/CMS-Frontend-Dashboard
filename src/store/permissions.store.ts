@@ -12,7 +12,7 @@ export interface ModulePermissions {
   can_documents: boolean;
 }
 
-const FULL_ACCESS: ModulePermissions = {
+export const FULL_ACCESS: ModulePermissions = {
   can_projects: true,
   can_boq: true,
   can_procurement: true,
@@ -26,8 +26,10 @@ const FULL_ACCESS: ModulePermissions = {
 interface PermissionsState {
   permissions: ModulePermissions;
   isLoaded: boolean;
+  _hasHydrated: boolean;
   setPermissions: (p: ModulePermissions) => void;
   clearPermissions: () => void;
+  setHasHydrated: (v: boolean) => void;
 }
 
 export const usePermissionsStore = create<PermissionsState>()(
@@ -35,10 +37,18 @@ export const usePermissionsStore = create<PermissionsState>()(
     (set) => ({
       permissions: FULL_ACCESS,
       isLoaded: false,
-      setPermissions: (permissions) => set({ permissions, isLoaded: true }),
+      _hasHydrated: false,
+      setPermissions: (permissions) =>
+        set({ permissions, isLoaded: true }),
       clearPermissions: () =>
         set({ permissions: FULL_ACCESS, isLoaded: false }),
+      setHasHydrated: (v) => set({ _hasHydrated: v }),
     }),
-    { name: "cms-permissions" }
+    {
+      name: "cms-permissions",
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
+    }
   )
 );
