@@ -8,6 +8,7 @@ export interface User {
   is_superadmin: boolean;
   status: string;
   avatar_url: string | null;
+  must_change_password: boolean;
 }
 
 export interface TokenResponse {

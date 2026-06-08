@@ -40,14 +40,21 @@ import {
     Tooltip,
     XAxis, YAxis
 } from "recharts";
+import { PermissionGuard } from "@/components/layouts/PermissionGuard";
 
 const TABS = [
   "Overview", "Invoices", "Expenses",
   "Change Orders", "Payment Certs",
 ] as const;
 type Tab = typeof TABS[number];
-
 export default function FinancePage() {
+  return (
+    <PermissionGuard module="can_finance">
+      <FinancePageContent />
+    </PermissionGuard>
+  );
+}
+function FinancePageContent() {
   const [tab, setTab] = useState<Tab>("Overview");
   const [projectId, setProjectId] = useState("");
   const [showNewInvoice, setShowNewInvoice] = useState(false);

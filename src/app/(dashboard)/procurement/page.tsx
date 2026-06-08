@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Plus, CheckCircle, Loader2, Moon, Sun } from "lucide-react";
 import { useForm } from "react-hook-form";
+import { PermissionGuard } from "@/components/layouts/PermissionGuard";
 
 const TABS = ["Purchase Orders", "Vendors", "RFQs", "GRNs"] as const;
 type Tab = typeof TABS[number];
@@ -39,8 +40,14 @@ function useTheme() {
   const toggle = () => setTheme(t => t === "dark" ? "light" : "dark");
   return { theme, toggle };
 }
-
 export default function ProcurementPage() {
+  return (
+    <PermissionGuard module="can_procurement">
+      <ProcurementPageContent />
+    </PermissionGuard>
+  );
+}
+function ProcurementPageContent() {
   const { theme, toggle } = useTheme();
   const [activeTab, setActiveTab] = useState<Tab>("Purchase Orders");
   const [selectedProjectId, setSelectedProjectId] = useState("");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useTenants, useCreateTenant,
   useSuspendTenant, useActivateTenant,
@@ -11,10 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
-import { Plus, Loader2, Building2, ShieldOff, ShieldCheck } from "lucide-react";
+import { Plus, Loader2, Building2, ShieldOff, ShieldCheck, Mail } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+
 
 const PLAN_COLORS: Record<string, string> = {
   free: "bg-gray-100 text-gray-600",
@@ -76,112 +76,132 @@ export default function TenantsAdminPage() {
 
       {/* Create form */}
       {showCreate && (
-        <Card>
-          <CardHeader><CardTitle>Create new tenant</CardTitle></CardHeader>
+        <Card className="dark:bg-gray-900 dark:border-gray-800">
+          <CardHeader>
+            <CardTitle className="dark:text-gray-100">Create new tenant + admin</CardTitle>
+          </CardHeader>
           <CardContent>
             <form
               className="grid grid-cols-2 gap-4 lg:grid-cols-3"
               onSubmit={handleSubmit(async d => {
-                await createTenant.mutateAsync(d);
+                await createTenant.mutateAsync({
+                  name: d.name,
+                  slug: d.slug,
+                  email: d.email,
+                  phone: d.phone,
+                  pan_number: d.pan_number,
+                  vat_number: d.vat_number,
+                  admin_full_name: d.admin_full_name,
+                  admin_email: d.admin_email,
+                  admin_phone: d.admin_phone,
+                });
                 reset();
                 setShowCreate(false);
               })}
             >
-              <Input label="Organisation name" placeholder="Acme Construction" {...register("name", { required: true })} />
+              {/* Tenant fields */}
+              <div className="col-span-full">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
+                  Organisation details
+                </p>
+              </div>
+              <Input label="Organisation name" placeholder="Acme Construction Pvt. Ltd." {...register("name", { required: true })} />
               <Input label="Slug" placeholder="acme-construction" {...register("slug", { required: true })} />
-              <Input label="Email" type="email" placeholder="admin@acme.com" {...register("email", { required: true })} />
+              <Input label="Organisation email" type="email" placeholder="info@acme.com" {...register("email", { required: true })} />
               <Input label="Phone" {...register("phone")} />
               <Input label="PAN number" {...register("pan_number")} />
               <Input label="VAT number" {...register("vat_number")} />
-              <div className="col-span-2 lg:col-span-3 flex justify-end gap-2">
+
+              {/* Divider */}
+              <div className="col-span-full border-t border-gray-200 dark:border-gray-800 pt-4 mt-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
+                  Admin user (will receive credentials by email)
+                </p>
+              </div>
+              <Input label="Admin full name" placeholder="Ramesh Sharma" {...register("admin_full_name", { required: true })} />
+              <Input label="Admin email" type="email" placeholder="admin@acme.com" {...register("admin_email", { required: true })} />
+              <Input label="Admin phone" {...register("admin_phone")} />
+
+              <div className="col-span-full rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3">
+                <p className="text-xs text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
+                  <Mail className="h-3.5 w-3.5" />
+                  A temporary password will be generated and emailed to the admin. They will be prompted to change it on first login.
+                </p>
+              </div>
+
+              <div className="col-span-full flex justify-end gap-2">
                 <Button variant="outline" type="button" onClick={() => setShowCreate(false)}>Cancel</Button>
-                <Button type="submit" loading={createTenant.isPending}>Create tenant</Button>
+                <Button type="submit" loading={createTenant.isPending}>
+                  Create tenant & send credentials
+                </Button>
               </div>
             </form>
           </CardContent>
         </Card>
       )}
 
-      {/* Tenant table */}
+      {/* Tenants list */}
       <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 text-xs font-medium uppercase tracking-wide text-gray-500">
-                <th className="px-4 py-3 text-left">Organisation</th>
-                <th className="px-4 py-3 text-left">Plan</th>
-                <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">Country</th>
-                <th className="px-4 py-3 text-right">Max Projects</th>
-                <th className="px-4 py-3 text-right">Max Users</th>
-                <th className="px-4 py-3 text-left">Created</th>
-                <th className="px-4 py-3 text-left">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={8} className="py-10 text-center">
-                    <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400" />
-                  </td>
-                </tr>
-              ) : !tenants.length ? (
-                <tr>
-                  <td colSpan={8} className="py-10 text-center text-gray-400">
-                    No tenants yet
-                  </td>
-                </tr>
-              ) : tenants.map((tenant: any) => (
-                <tr key={tenant.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
-                        <Building2 className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{tenant.name}</p>
-                        <p className="text-xs text-gray-500">{tenant.slug} · {tenant.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${PLAN_COLORS[tenant.plan] ?? "bg-gray-100 text-gray-600"}`}>
-                      {tenant.plan}
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            </div>
+          ) : tenants.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+              <Building2 className="h-8 w-8 mb-2" />
+              <p className="text-sm">No tenants yet</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+              {tenants.map((t: any) => (
+                <li key={t.id} className="flex items-center justify-between px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t.name}</p>
+                    <p className="text-xs text-gray-500">{t.slug} · {formatDate(t.created_at)}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${PLAN_COLORS[t.plan] ?? "bg-gray-100 text-gray-600"}`}
+                    >
+                      {t.plan}
                     </span>
-                  </td>
-                  <td className="px-4 py-3"><Badge status={tenant.status} /></td>
-                  <td className="px-4 py-3 text-gray-600 uppercase">{tenant.country}</td>
-                  <td className="px-4 py-3 text-right text-gray-700">{tenant.max_projects}</td>
-                  <td className="px-4 py-3 text-right text-gray-700">{tenant.max_users}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(tenant.created_at)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      {tenant.status === "active" || tenant.status === "trial" ? (
-                        <Button
-                          size="sm" variant="outline"
-                          loading={suspendTenant.isPending}
-                          onClick={() => suspendTenant.mutate(tenant.id)}
-                          className="text-red-600 border-red-200 hover:bg-red-50"
-                        >
-                          <ShieldOff className="h-3 w-3 mr-1" /> Suspend
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm" variant="outline"
-                          loading={activateTenant.isPending}
-                          onClick={() => activateTenant.mutate(tenant.id)}
-                          className="text-green-600 border-green-200 hover:bg-green-50"
-                        >
-                          <ShieldCheck className="h-3 w-3 mr-1" /> Activate
-                        </Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                    <Badge
+                      variant={
+                        t.status === "active"
+                          ? "success"
+                          : t.status === "suspended"
+                          ? "destructive"
+                          : "secondary"
+                      }
+                    >
+                      {t.status}
+                    </Badge>
+                    {t.status === "suspended" ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        loading={activateTenant.isPending}
+                        onClick={() => activateTenant.mutate(t.id)}
+                      >
+                        <ShieldCheck className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        loading={suspendTenant.isPending}
+                        onClick={() => suspendTenant.mutate(t.id)}
+                      >
+                        <ShieldOff className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </ul>
+          )}
+        </CardContent>
 
         {/* Pagination */}
         {totalPages > 1 && (
@@ -191,15 +211,21 @@ export default function TenantsAdminPage() {
             </p>
             <div className="flex gap-2">
               <Button
-                size="sm" variant="outline"
+                size="sm"
+                variant="outline"
                 disabled={page === 1}
                 onClick={() => setPage(p => p - 1)}
-              >Previous</Button>
+              >
+                Previous
+              </Button>
               <Button
-                size="sm" variant="outline"
+                size="sm"
+                variant="outline"
                 disabled={page === totalPages}
                 onClick={() => setPage(p => p + 1)}
-              >Next</Button>
+              >
+                Next
+              </Button>
             </div>
           </div>
         )}

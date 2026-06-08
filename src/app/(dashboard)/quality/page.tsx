@@ -20,6 +20,7 @@ import {
   ClipboardList, Search,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
+import { PermissionGuard } from "@/components/layouts/PermissionGuard";
 
 const TABS = ["Inspections", "NCRs", "Safety Incidents", "Punch List"] as const;
 type Tab = typeof TABS[number];
@@ -45,6 +46,13 @@ function SeverityBadge({ severity }: { severity: string }) {
 }
 
 export default function QualityPage() {
+  return (
+    <PermissionGuard module="can_quality">
+      <QualityPageContent />
+    </PermissionGuard>
+  );
+}
+function QualityPageContent() {
   const [tab, setTab] = useState<Tab>("Inspections");
   const [projectId, setProjectId] = useState("");
   const [showNewInspection, setShowNewInspection] = useState(false);
