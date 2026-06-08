@@ -1,17 +1,27 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useLogout } from "@/hooks/useAuth";
+import { useBrandingStore } from "@/hooks/useBranding";
+import { useFetchPermissions, useHasPermission } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
-import { useLogout } from "@/hooks/useAuth";
-import { useHasPermission, useFetchPermissions } from "@/hooks/usePermissions";
 import {
-  LayoutDashboard, FolderKanban, FileSpreadsheet,
-  ShoppingCart, Package, HardHat, FileText,
-  DollarSign, LogOut, Building2, Settings,
-  ShieldCheck, Users,
+  Building2,
+  DollarSign,
+  FileSpreadsheet,
+  FileText,
+  FolderKanban,
+  HardHat,
+  LayoutDashboard,
+  LogOut,
+  Package,
+  ShieldCheck,
+  ShoppingCart,
+  Users,
+  Settings
 } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface NavItem {
   label: string;
@@ -33,6 +43,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { label: "Quality & Safety", href: "/quality", icon: ShieldCheck, permissionKey: "can_quality" },
   { label: "Documents", href: "/documents", icon: FileText, permissionKey: "can_documents" },
   { label: "User Management", href: "/users", icon: Users, adminOnly: true },
+  { label: "Company Settings",href: "/company-settings", icon: Settings, adminOnly: true,},
 ];
 
 const SUPERADMIN_ITEMS: NavItem[] = [
@@ -43,6 +54,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuthStore();
   const logout = useLogout();
+  const { branding } = useBrandingStore();
 
   // Fetch permissions on mount — keeps them fresh
   useFetchPermissions();
@@ -65,19 +77,29 @@ export function Sidebar() {
     <aside className="flex h-screen w-64 flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex-shrink-0">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 border-b border-gray-200 dark:border-gray-800 px-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
-          <Building2 className="h-5 w-5 text-white" />
-        </div>
+        {branding?.logo_url ? (
+          <img
+            src={branding.logo_url}
+            alt={branding.name}
+            className="h-8 w-8 rounded-lg object-contain bg-white"
+          />
+        ) : (
+          <div
+            className="flex h-8 w-8 items-center justify-center rounded-lg"
+            style={{ backgroundColor: branding?.primary_color ?? "#2563eb" }}
+          >
+            <Building2 className="h-5 w-5 text-white" />
+          </div>
+        )}
         <div>
           <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-            CMS Platform
+            {branding?.name ?? "CMS Platform"}
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
             {user?.is_superadmin ? "Super Admin" : "Dashboard"}
           </p>
         </div>
       </div>
-
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-0.5">
