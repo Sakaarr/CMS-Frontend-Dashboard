@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import { Sidebar } from "@/components/layouts/Sidebar";
 import { ThemeToggle } from "@/components/layouts/ThemeToggle";
+import { ForcePasswordChange } from "@/components/layouts/ForcePasswordChange";
 import { Loader2 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -12,7 +13,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, _hasHydrated } = useAuthStore();
+  const { isAuthenticated, _hasHydrated, user } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -20,7 +21,6 @@ export default function DashboardLayout({
     if (!isAuthenticated) router.replace("/login");
   }, [isAuthenticated, _hasHydrated, router]);
 
-  // Still hydrating — show spinner, don't redirect
   if (!_hasHydrated) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
@@ -30,6 +30,11 @@ export default function DashboardLayout({
   }
 
   if (!isAuthenticated) return null;
+
+  // Force password change before anything else
+  if (user?.must_change_password) {
+    return <ForcePasswordChange />;
+  }
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950">

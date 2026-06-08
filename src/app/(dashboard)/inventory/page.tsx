@@ -18,6 +18,7 @@ import { formatCurrency } from "@/lib/utils";
 import { AlertTriangle, Loader2, Plus, Warehouse } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { PermissionGuard } from "@/components/layouts/PermissionGuard";
 
 function Field({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
@@ -35,6 +36,13 @@ const TABS = ["Warehouses & Stock", "Material Requests", "Low Stock Alerts"] as 
 type Tab = typeof TABS[number];
 
 export default function InventoryPage() {
+  return (
+    <PermissionGuard module="can_inventory">
+      <InventoryPageContent />
+    </PermissionGuard>
+  );
+}
+function InventoryPageContent() {
   const [activeTab, setActiveTab] = useState<Tab>("Warehouses & Stock");
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [selectedWarehouseId, setSelectedWarehouseId] = useState("");

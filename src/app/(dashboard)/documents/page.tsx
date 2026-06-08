@@ -18,6 +18,7 @@ import {
   File, Image, FileSpreadsheet,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
+import { PermissionGuard } from "@/components/layouts/PermissionGuard";
 
 const CATEGORIES = [
   "drawing", "contract", "specification", "report",
@@ -43,8 +44,14 @@ function formatSize(kb: number | null | undefined): string {
   if (kb < 1024) return `${kb.toFixed(0)} KB`;
   return `${(kb / 1024).toFixed(1)} MB`;
 }
-
 export default function DocumentsPage() {
+  return (
+    <PermissionGuard module="can_documents">
+      <DocumentsPageContent />
+    </PermissionGuard>
+  );
+}
+function DocumentsPageContent() {
   const [projectId, setProjectId] = useState("");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");

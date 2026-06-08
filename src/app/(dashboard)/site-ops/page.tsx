@@ -8,8 +8,16 @@ import { useDPR, useDPRs, useSiteOpsSummary, useSubmitDPR } from "@/hooks/useSit
 import { formatDate } from "@/lib/utils";
 import { CheckCircle, Clock, HardHat, Loader2, Users } from "lucide-react";
 import { useState } from "react";
+import { PermissionGuard } from "@/components/layouts/PermissionGuard";
 
 export default function SiteOpsPage() {
+  return (
+    <PermissionGuard module="can_site_ops">
+      <SiteOpsPageContent />
+    </PermissionGuard>
+  );
+}
+function SiteOpsPageContent() {
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [selectedSiteId, setSelectedSiteId] = useState("");
   const [selectedDPRId, setSelectedDPRId] = useState("");

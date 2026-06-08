@@ -18,6 +18,7 @@ import {
   PieChart, Pie, Cell, Tooltip,
   ResponsiveContainer, Legend,
 } from "recharts";
+import { PermissionGuard } from "@/components/layouts/PermissionGuard";
 
 // Reusable dark-mode-aware field
 function Field({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
@@ -31,8 +32,15 @@ function Field({ label, ...props }: { label: string } & React.InputHTMLAttribute
     </div>
   );
 }
-
 export default function BOQPage() {
+return (
+    <PermissionGuard module="can_boq">
+      <BOQPageContent />
+    </PermissionGuard>
+  );
+}
+
+function BOQPageContent() {
   const { data: projects } = useProjects();
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [selectedVersionId, setSelectedVersionId] = useState("");
