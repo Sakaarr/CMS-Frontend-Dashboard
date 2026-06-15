@@ -1,14 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { apiClient } from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { KeyRound } from "lucide-react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff, KeyRound } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 const schema = z
   .object({
@@ -28,9 +26,12 @@ const schema = z
 type Form = z.infer<typeof schema>;
 
 export function ForcePasswordChange() {
-  const { user, setAuth, tenantSlug } = useAuthStore();
+  const { setAuth, tenantSlug } = useAuthStore();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
@@ -44,7 +45,6 @@ export function ForcePasswordChange() {
         current_password: data.current_password,
         new_password: data.new_password,
       });
-      // Refresh user data — must_change_password should now be false
       const meRes = await apiClient.get("/auth/me");
       setAuth(meRes.data.data, tenantSlug!);
     } catch (e: any) {
@@ -53,6 +53,52 @@ export function ForcePasswordChange() {
       setLoading(false);
     }
   };
+
+  const PasswordField = ({
+    id,
+    label,
+    placeholder,
+    show,
+    onToggle,
+    registration,
+    fieldError,
+  }: {
+    id: string;
+    label: string;
+    placeholder: string;
+    show: boolean;
+    onToggle: () => void;
+    registration: ReturnType<typeof register>;
+    fieldError?: string;
+  }) => (
+    <div>
+      <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          type={show ? "text" : "password"}
+          placeholder={placeholder}
+          className={`h-10 w-full rounded-lg border px-3 pr-10 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+            fieldError ? "border-red-500" : "border-gray-300 dark:border-gray-700"
+          }`}
+          {...registration}
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          tabIndex={-1}
+        >
+          {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
+      {fieldError && (
+        <p className="text-xs text-red-600 mt-1">{fieldError}</p>
+      )}
+    </div>
+  );
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">
@@ -73,38 +119,49 @@ export function ForcePasswordChange() {
 
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 shadow-sm">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <Input
+            <PasswordField
               id="current_password"
-              type="password"
               label="Temporary password"
               placeholder="Your temporary password"
-              error={errors.current_password?.message}
-              {...register("current_password")}
+              show={showCurrent}
+              onToggle={() => setShowCurrent(v => !v)}
+              registration={register("current_password")}
+              fieldError={errors.current_password?.message}
             />
-            <Input
+
+            <PasswordField
               id="new_password"
-              type="password"
               label="New password"
-              placeholder="Min 8 chars, 1 uppercase, 1 number"
-              error={errors.new_password?.message}
-              {...register("new_password")}
+              placeholder="At least 8 characters"
+              show={showNew}
+              onToggle={() => setShowNew(v => !v)}
+              registration={register("new_password")}
+              fieldError={errors.new_password?.message}
             />
-            <Input
+
+            <PasswordField
               id="confirm_password"
-              type="password"
               label="Confirm new password"
-              placeholder="Repeat new password"
-              error={errors.confirm_password?.message}
-              {...register("confirm_password")}
+              placeholder="Repeat your new password"
+              show={showConfirm}
+              onToggle={() => setShowConfirm(v => !v)}
+              registration={register("confirm_password")}
+              fieldError={errors.confirm_password?.message}
             />
 
             {error && (
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              </div>
             )}
 
-            <Button type="submit" className="w-full" loading={loading}>
-              Set new password
-            </Button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-10 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+            >
+              {loading ? "Updating…" : "Set new password"}
+            </button>
           </form>
         </div>
       </div>
