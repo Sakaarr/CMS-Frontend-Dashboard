@@ -138,27 +138,39 @@ export function Sidebar() {
 
       {/* User footer */}
       <div className="border-t border-gray-200 dark:border-gray-800 p-3">
-        <div className="flex items-center gap-3 rounded-lg px-2 py-2">
+      <Link
+        href="/profile"
+        className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+      >
+        {/* Avatar */}
+        {user?.avatar_url ? (
+          <img
+            src={user.avatar_url}
+            alt={user.full_name}
+            className="h-8 w-8 rounded-full object-cover flex-shrink-0"
+          />
+        ) : (
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-semibold flex-shrink-0">
             {user?.full_name?.slice(0, 2).toUpperCase()}
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
-              {user?.full_name}
-            </p>
-            <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-              {user?.email}
-            </p>
-          </div>
-          <button
-            onClick={logout}
-            className="rounded p-1 text-gray-400 hover:text-red-500 transition-colors"
-            title="Logout"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+            {user?.full_name}
+          </p>
+          <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+            {user?.email}
+          </p>
         </div>
-      </div>
+        <button
+          onClick={(e) => { e.preventDefault(); logout(); }}
+          className="rounded p-1 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+          title="Logout"
+        >
+          <LogOut className="h-4 w-4" />
+        </button>
+      </Link>
+    </div>
     </aside>
   );
 }
