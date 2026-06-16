@@ -353,16 +353,26 @@ export default function OverviewPage() {
       Object.keys(chartsRef.current).forEach(destroyChart);
     };
   }, [statsLoading, projectsLoading, isDark, stats, projects]);
+  const hour = new Date().getHours();
+
+  const greeting =
+    hour < 12
+      ? "Let's Kick off the day"
+      : hour < 17
+      ? "Afternoon Fuel Activated"
+      : hour < 21
+      ? "A Productive Evening Ahead"
+      : "The Night Shift Begins";
 
   return (
     <div className="space-y-6">
       {/* Greeting */}
       <div>
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-          Good morning, {user?.full_name?.split(" ")[0]} 👋
+          {greeting}, {user?.full_name?.split(" ")[0]} 👋
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-          Platform overview — {new Date().toLocaleDateString("en-NP", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+          Platform overview - {new Date().toLocaleDateString("en-NP", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
         </p>
       </div>
 

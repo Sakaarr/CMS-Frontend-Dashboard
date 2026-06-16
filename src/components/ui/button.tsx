@@ -3,15 +3,24 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Loader2 } from "lucide-react";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-500",
-        outline: "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50",
-        ghost: "text-gray-700 hover:bg-gray-100",
-        danger: "bg-red-600 text-white hover:bg-red-700",
-        success: "bg-green-600 text-white hover:bg-green-700",
+        default:
+      "bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-500",
+
+      outline:
+      "border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800",
+
+      ghost:
+      "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800",
+
+      danger:
+      "bg-red-600 text-white hover:bg-red-700",
+
+      success:
+      "bg-green-600 text-white hover:bg-green-700",
       },
       size: {
         sm: "h-8 px-3 text-xs",

@@ -104,3 +104,62 @@ export function useMilestones(projectId: string) {
     enabled: !!projectId,
   });
 }
+
+export function useCreateSite(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      name: string;
+      code: string;
+      description?: string;
+      city?: string;
+      district?: string;
+      latitude?: number;
+      longitude?: number;
+      site_incharge_id?: string;
+    }) => apiClient.post(`/projects/${projectId}/sites`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["sites", projectId] }),
+  });
+}
+
+export function useCreateMilestone(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      name: string;
+      description?: string;
+      site_id?: string;
+      planned_date?: string;
+      sequence?: number;
+      is_critical?: boolean;
+    }) => apiClient.post(`/projects/${projectId}/milestones`, data),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["milestones", projectId] }),
+  });
+}
+
+export function useUpdateMilestone(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      milestoneId,
+      data,
+    }: {
+      milestoneId: string;
+      data: { completion_percentage?: number; status?: string; actual_date?: string };
+    }) => apiClient.patch(`/projects/${projectId}/milestones/${milestoneId}`, data),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["milestones", projectId] }),
+  });
+}
+
+export function useProjectMembers(projectId: string) {
+  return useQuery({
+    queryKey: ["project-members", projectId],
+    queryFn: async () => {
+      const res = await apiClient.get(`/projects/${projectId}/members`);
+      return res.data.data;
+    },
+    enabled: !!projectId,
+  });
+}

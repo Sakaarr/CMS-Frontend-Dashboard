@@ -18,6 +18,7 @@ import {
     useInvoices,
     usePaymentCerts,
     useRecordPayment,
+    useSubmitInvoice,
 } from "@/hooks/useFinance";
 import { useProjects } from "@/hooks/useProjects";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -29,6 +30,7 @@ import {
     Plus,
     TrendingDown,
     TrendingUp,
+    Send,
 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -41,6 +43,7 @@ import {
     XAxis, YAxis
 } from "recharts";
 import { PermissionGuard } from "@/components/layouts/PermissionGuard";
+import { apiClient } from "@/lib/api";
 
 const TABS = [
   "Overview", "Invoices", "Expenses",
@@ -86,6 +89,7 @@ function FinancePageContent() {
   const { register: regPay, handleSubmit: handlePay, reset: resetPay } = useForm();
 
   const invoices = invoicesData?.data ?? [];
+  const submitInvoice = useSubmitInvoice(projectId);
   const expenses = expensesData?.data ?? [];
 
   // Shared input className
@@ -447,9 +451,27 @@ function FinancePageContent() {
                     <td className="px-4 py-3 text-right font-medium text-red-600 dark:text-red-400">{formatCurrency(inv.balance_due)}</td>
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{formatDate(inv.due_date)}</td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-2">
+                      <div className="flex gap-1.5 flex-wrap">
+                        {inv.status === "draft" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            loading={submitInvoice?.isPending}
+                            onClick={async () => {
+                              try {
+                                await apiClient.post(`/invoices/${inv.id}/submit`);
+                                qc.invalidateQueries({ queryKey: ["invoices", projectId] });
+                                qc.invalidateQueries({ queryKey: ["finance-summary", projectId] });
+                              } catch {}
+                            }}
+                          >
+                            <Send className="h-3 w-3 mr-1" /> Submit
+                          </Button>
+                        )}
                         {inv.status === "submitted" && (
-                          <Button size="sm" variant="success"
+                          <Button
+                            size="sm"
+                            variant="success"
                             loading={approveInvoice.isPending}
                             onClick={() => approveInvoice.mutate(inv.id)}
                           >
@@ -457,7 +479,11 @@ function FinancePageContent() {
                           </Button>
                         )}
                         {["approved", "partially_paid", "overdue"].includes(inv.status) && (
-                          <Button size="sm" variant="outline" onClick={() => setPayingInvoiceId(inv.id)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setPayingInvoiceId(inv.id)}
+                          >
                             Record payment
                           </Button>
                         )}

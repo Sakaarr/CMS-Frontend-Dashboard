@@ -33,6 +33,7 @@ export default function TenantsAdminPage() {
   const createTenant = useCreateTenant();
   const suspendTenant = useSuspendTenant();
   const activateTenant = useActivateTenant();
+  const [createError, setCreateError] = useState("");
   const { register, handleSubmit, reset } = useForm();
 
   useEffect(() => {
@@ -49,8 +50,8 @@ export default function TenantsAdminPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tenant Management</h1>
-          <p className="text-sm text-gray-500">{total} organisations on the platform</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Tenant Management</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">{total} organisations on the platform</p>
         </div>
         <Button onClick={() => setShowCreate(true)}>
           <Plus className="h-4 w-4 mr-2" /> New tenant
@@ -64,10 +65,13 @@ export default function TenantsAdminPage() {
             ? total
             : tenants.filter((t: any) => t.status === s).length;
           return (
-            <Card key={s}>
+            <Card
+                key={s}
+                className="dark:bg-gray-900 dark:border-gray-800"
+              >
               <CardContent className="pt-5">
-                <p className="text-xs text-gray-500 capitalize">{s}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{count}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{s}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{count}</p>
               </CardContent>
             </Card>
           );
@@ -84,20 +88,28 @@ export default function TenantsAdminPage() {
             <form
               className="grid grid-cols-2 gap-4 lg:grid-cols-3"
               onSubmit={handleSubmit(async d => {
+              setCreateError("");
+              try {
                 await createTenant.mutateAsync({
                   name: d.name,
                   slug: d.slug,
                   email: d.email,
-                  phone: d.phone,
-                  pan_number: d.pan_number,
-                  vat_number: d.vat_number,
+                  phone: d.phone || undefined,
+                  pan_number: d.pan_number || undefined,
+                  vat_number: d.vat_number || undefined,
                   admin_full_name: d.admin_full_name,
                   admin_email: d.admin_email,
-                  admin_phone: d.admin_phone,
+                  admin_phone: d.admin_phone || undefined,
                 });
                 reset();
                 setShowCreate(false);
-              })}
+              } catch (e: any) {
+                setCreateError(
+                  e?.response?.data?.message || "Failed to create tenant. Please try again."
+                );
+              }
+            })}
+
             >
               {/* Tenant fields */}
               <div className="col-span-full">
@@ -128,7 +140,13 @@ export default function TenantsAdminPage() {
                   A temporary password will be generated and emailed to the admin. They will be prompted to change it on first login.
                 </p>
               </div>
-
+              {createError && (
+                <div className="col-span-full rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3">
+                  <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
+                    <span>⚠️</span> {createError}
+                  </p>
+                </div>
+              )}
               <div className="col-span-full flex justify-end gap-2">
                 <Button variant="outline" type="button" onClick={() => setShowCreate(false)}>Cancel</Button>
                 <Button type="submit" loading={createTenant.isPending}>
@@ -141,14 +159,14 @@ export default function TenantsAdminPage() {
       )}
 
       {/* Tenants list */}
-      <Card>
+      <Card className="dark:bg-gray-900 dark:border-gray-800">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
             </div>
           ) : tenants.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-500">
               <Building2 className="h-8 w-8 mb-2" />
               <p className="text-sm">No tenants yet</p>
             </div>
@@ -205,8 +223,8 @@ export default function TenantsAdminPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-            <p className="text-sm text-gray-500">
+          <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-800 px-4 py-3">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Page {page} of {totalPages} · {total} total
             </p>
             <div className="flex gap-2">

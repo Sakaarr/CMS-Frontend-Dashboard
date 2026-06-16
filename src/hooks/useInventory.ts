@@ -45,20 +45,43 @@ export function useMaterialRequests(projectId: string) {
   });
 }
 
+export function useCreateWarehouse() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => apiClient.post("/warehouses", data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["warehouses"] }),
+  });
+}
+
+export function useRecordTransaction(warehouseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) =>
+      apiClient.post(`/warehouses/${warehouseId}/transactions`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["stock", warehouseId] });
+      qc.invalidateQueries({ queryKey: ["low-stock"] });
+    },
+  });
+}
+
 export function useCreateMR(projectId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: any) =>
       apiClient.post(`/projects/${projectId}/material-requests`, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["material-requests", projectId] }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["material-requests", projectId] }),
   });
 }
 
 export function useSubmitMR(projectId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (mrId: string) => apiClient.post(`/material-requests/${mrId}/submit`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["material-requests", projectId] }),
+    mutationFn: (mrId: string) =>
+      apiClient.post(`/material-requests/${mrId}/submit`),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["material-requests", projectId] }),
   });
 }
 
@@ -67,6 +90,19 @@ export function useApproveMR(projectId: string) {
   return useMutation({
     mutationFn: ({ mrId, items }: { mrId: string; items: any[] }) =>
       apiClient.post(`/material-requests/${mrId}/approve`, items),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["material-requests", projectId] }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["material-requests", projectId] }),
+  });
+}
+
+export function useIssueMR(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (mrId: string) =>
+      apiClient.post(`/material-requests/${mrId}/issue`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["material-requests", projectId] });
+      qc.invalidateQueries({ queryKey: ["stock"] });
+    },
   });
 }
