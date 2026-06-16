@@ -170,3 +170,15 @@ export function useCreateChangeOrder(projectId: string) {
       qc.invalidateQueries({ queryKey: ["change-orders", projectId] }),
   });
 }
+
+export function useSubmitInvoice(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (invoiceId: string) =>
+      apiClient.post(`/invoices/${invoiceId}/submit`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["invoices", projectId] });
+      qc.invalidateQueries({ queryKey: ["finance-summary", projectId] });
+    },
+  });
+}

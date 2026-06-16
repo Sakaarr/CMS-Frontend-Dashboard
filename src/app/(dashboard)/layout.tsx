@@ -8,6 +8,7 @@ import { useFetchPermissions } from "@/hooks/usePermissions";
 import { Sidebar } from "@/components/layouts/Sidebar";
 import { ThemeToggle } from "@/components/layouts/ThemeToggle";
 import { ForcePasswordChange } from "@/components/layouts/ForcePasswordChange";
+import { BrandingProvider } from "@/components/layouts/BrandingProvider";
 import { Loader2 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -56,6 +57,7 @@ export default function DashboardLayout({
   }
 
   return (
+    <BrandingProvider>
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -67,5 +69,6 @@ export default function DashboardLayout({
         </main>
       </div>
     </div>
+    </BrandingProvider>
   );
 }

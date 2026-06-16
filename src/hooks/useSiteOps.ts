@@ -79,10 +79,11 @@ export function useSiteOpsSummary(projectId: string) {
   });
 }
 
+
 export function useCreateDPR(projectId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<DPR> & Record<string, unknown>) =>
+    mutationFn: (data: any) =>
       apiClient.post(`/projects/${projectId}/dprs`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["dprs", projectId] });
@@ -102,3 +103,4 @@ export function useSubmitDPR(projectId: string) {
     },
   });
 }
+

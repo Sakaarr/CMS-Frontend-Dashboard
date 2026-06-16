@@ -5,7 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import {
   useProject, useUpdateProjectStatus,
   useSites, useMilestones,
+  useCreateSite, useCreateMilestone, useUpdateMilestone,
 } from "@/hooks/useProjects";
+import { useForm } from "react-hook-form";
+import { Plus } from "lucide-react";
 import { useBudgetVersions, useBOQSummary } from "@/hooks/useBoq";
 import { usePurchaseOrders, useProcurementStats } from "@/hooks/useProcurement";
 import { useDPRs, useSiteOpsSummary } from "@/hooks/useSiteOps";
@@ -22,10 +25,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Chart from "chart.js/auto";
+import { Input } from "@/components/ui/input";
 
 // ── Tab definitions ───────────────────────────────────────────────
 const TABS = [
-  "Overview", "Sites", "BOQ",
+  "Overview", "Sites", "Milestones", "BOQ",
   "Procurement", "Inventory", "Site Ops", "Finance",
 ] as const;
 type Tab = typeof TABS[number];
@@ -512,26 +516,11 @@ export default function ProjectDetailPage() {
 
       {/* ── Sites tab ── */}
       {tab === "Sites" && (
-        <Card className="dark:bg-gray-900 dark:border-gray-800">
-          <CardHeader>
-            <CardTitle className="dark:text-gray-100">Sites ({sites?.length ?? 0})</CardTitle>
-          </CardHeader>
-          <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            {!sites?.length ? (
-              <p className="py-8 text-center text-sm text-gray-400">No sites added yet</p>
-            ) : sites.map((s: any) => (
-              <div key={s.id} className="flex items-center justify-between px-6 py-4">
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">{s.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {s.code} · {s.city ?? "—"}{s.district ? `, ${s.district}` : ""}
-                  </p>
-                </div>
-                <Badge status={s.status} />
-              </div>
-            ))}
-          </div>
-        </Card>
+        <SitesTab projectId={project.id} tenantCurrency={project.currency} />
+      )}
+
+      {tab === "Milestones" && (
+        <MilestonesTab projectId={project.id} />
       )}
 
       {/* ── BOQ tab ── */}
@@ -734,4 +723,374 @@ export default function ProjectDetailPage() {
       )}
     </div>
   );
+  // ── Sites sub-component ────────────────────────────────────────────
+function SitesTab({ projectId }: { projectId: string }) {
+  const { data: sites, isLoading } = useSites(projectId);
+  const createSite = useCreateSite(projectId);
+  const [showCreate, setShowCreate] = useState(false);
+  const [error, setError] = useState("");
+  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+
+  const onSubmit = async (d: any) => {
+    setError("");
+    try {
+      await createSite.mutateAsync({
+        name: d.name,
+        code: d.code,
+        description: d.description || undefined,
+        city: d.city || undefined,
+        district: d.district || undefined,
+      });
+      reset();
+      setShowCreate(false);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || "Failed to create site");
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+          Sites ({sites?.length ?? 0})
+        </h3>
+        <Button size="sm" onClick={() => setShowCreate(true)}>
+          <Plus className="h-4 w-4 mr-1" /> Add site
+        </Button>
+      </div>
+
+      {showCreate && (
+        <Card className="dark:bg-gray-900 dark:border-gray-800">
+          <CardContent className="pt-5">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              New site
+            </h4>
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className="grid grid-cols-2 gap-4"
+            >
+              <Input
+                label="Site name"
+                placeholder="Main Site"
+                error={errors.name?.message as string}
+                {...register("name", { required: "Required" })}
+              />
+              <Input
+                label="Site code"
+                placeholder="SITE-001"
+                error={errors.code?.message as string}
+                {...register("code", { required: "Required" })}
+              />
+              <Input label="City" placeholder="Kathmandu" {...register("city")} />
+              <Input label="District" placeholder="Kathmandu" {...register("district")} />
+              <div className="col-span-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                  Description
+                </label>
+                <textarea
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm h-16 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  {...register("description")}
+                />
+              </div>
+              {error && (
+                <p className="col-span-2 text-sm text-red-600 dark:text-red-400">
+                  {error}
+                </p>
+              )}
+              <div className="col-span-2 flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  type="button"
+                  size="sm"
+                  onClick={() => { setShowCreate(false); reset(); setError(""); }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" loading={createSite.isPending}>
+                  Create site
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="dark:bg-gray-900 dark:border-gray-800">
+        {isLoading ? (
+          <CardContent className="flex justify-center py-10">
+            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+          </CardContent>
+        ) : !sites?.length ? (
+          <CardContent className="py-10 text-center text-gray-400">
+            No sites yet — add the first site
+          </CardContent>
+        ) : (
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {sites.map((s: any) => (
+              <div key={s.id} className="flex items-center justify-between px-6 py-4">
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">
+                    {s.name}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {s.code}
+                    {s.city ? ` · ${s.city}` : ""}
+                    {s.district ? `, ${s.district}` : ""}
+                  </p>
+                </div>
+                <Badge status={s.status} />
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+// ── Milestones sub-component ──────────────────────────────────────
+function MilestonesTab({ projectId }: { projectId: string }) {
+  const { data: milestones, isLoading } = useMilestones(projectId);
+  const createMilestone = useCreateMilestone(projectId);
+  const updateMilestone = useUpdateMilestone(projectId);
+  const [showCreate, setShowCreate] = useState(false);
+  const [error, setError] = useState("");
+  const { register, handleSubmit, reset } = useForm();
+
+  const STATUS_COLORS: Record<string, string> = {
+    pending: "bg-gray-100 text-gray-600",
+    in_progress: "bg-blue-100 text-blue-700",
+    completed: "bg-green-100 text-green-700",
+    delayed: "bg-red-100 text-red-700",
+    cancelled: "bg-gray-100 text-gray-400",
+  };
+
+  const onSubmit = async (d: any) => {
+    setError("");
+    try {
+      await createMilestone.mutateAsync({
+        name: d.name,
+        description: d.description || undefined,
+        planned_date: d.planned_date || undefined,
+        sequence: parseInt(d.sequence) || 0,
+        is_critical: d.is_critical === "true",
+      });
+      reset();
+      setShowCreate(false);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || "Failed to create milestone");
+    }
+  };
+
+  const cycleStatus = async (milestone: any) => {
+    const next: Record<string, string> = {
+      pending: "in_progress",
+      in_progress: "completed",
+      completed: "completed",
+      delayed: "in_progress",
+    };
+    const completion: Record<string, number> = {
+      pending: 0,
+      in_progress: 50,
+      completed: 100,
+    };
+    const newStatus = next[milestone.status] ?? "in_progress";
+    await updateMilestone.mutateAsync({
+      milestoneId: milestone.id,
+      data: {
+        status: newStatus,
+        completion_percentage: completion[newStatus] ?? 50,
+        actual_date:
+          newStatus === "completed"
+            ? new Date().toISOString().split("T")[0]
+            : undefined,
+      },
+    });
+  };
+
+  const completedCount =
+    milestones?.filter((m: any) => m.status === "completed").length ?? 0;
+  const total = milestones?.length ?? 0;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+          Milestones ({completedCount}/{total} completed)
+        </h3>
+        <Button size="sm" onClick={() => setShowCreate(true)}>
+          <Plus className="h-4 w-4 mr-1" /> Add milestone
+        </Button>
+      </div>
+
+      {showCreate && (
+        <Card className="dark:bg-gray-900 dark:border-gray-800">
+          <CardContent className="pt-5">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              New milestone
+            </h4>
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className="grid grid-cols-2 gap-4"
+            >
+              <Input
+                label="Milestone name"
+                placeholder="Foundation complete"
+                {...register("name", { required: "Required" })}
+              />
+              <Input label="Planned date" type="date" {...register("planned_date")} />
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                  Sequence order
+                </label>
+                <input
+                  type="number"
+                  defaultValue={1}
+                  className="h-10 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  {...register("sequence")}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                  Critical milestone?
+                </label>
+                <select
+                  className="h-10 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-gray-100"
+                  {...register("is_critical")}
+                >
+                  <option value="false">No</option>
+                  <option value="true">Yes — critical path</option>
+                </select>
+              </div>
+              <div className="col-span-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                  Description
+                </label>
+                <textarea
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm h-16 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  {...register("description")}
+                />
+              </div>
+              {error && (
+                <p className="col-span-2 text-sm text-red-600 dark:text-red-400">
+                  {error}
+                </p>
+              )}
+              <div className="col-span-2 flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  type="button"
+                  size="sm"
+                  onClick={() => { setShowCreate(false); reset(); }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" loading={createMilestone.isPending}>
+                  Create milestone
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="dark:bg-gray-900 dark:border-gray-800">
+        {isLoading ? (
+          <CardContent className="flex justify-center py-10">
+            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+          </CardContent>
+        ) : !milestones?.length ? (
+          <CardContent className="py-10 text-center text-gray-400">
+            No milestones yet
+          </CardContent>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <th className="px-4 py-3 text-left">#</th>
+                  <th className="px-4 py-3 text-left">Milestone</th>
+                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-right">Progress</th>
+                  <th className="px-4 py-3 text-left">Planned date</th>
+                  <th className="px-4 py-3 text-left">Actual date</th>
+                  <th className="px-4 py-3 text-left">Critical</th>
+                  <th className="px-4 py-3 text-left">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {milestones.map((m: any) => (
+                  <tr
+                    key={m.id}
+                    className={`hover:bg-gray-50 dark:hover:bg-gray-800/30 ${
+                      m.is_critical ? "bg-red-50/30 dark:bg-red-900/10" : ""
+                    }`}
+                  >
+                    <td className="px-4 py-3 text-gray-500">{m.sequence}</td>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                        {m.name}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                          STATUS_COLORS[m.status] ?? "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {m.status?.replace(/_/g, " ")}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <div className="w-20 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
+                          <div
+                            className="h-1.5 rounded-full bg-blue-500"
+                            style={{ width: `${m.completion_percentage}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-500 w-8 text-right">
+                          {m.completion_percentage}%
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500">
+                      {formatDate(m.planned_date)}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500">
+                      {formatDate(m.actual_date)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {m.is_critical && (
+                        <span className="text-xs font-medium text-red-600 dark:text-red-400">
+                          ⚡ Critical
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {m.status !== "completed" && m.status !== "cancelled" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => cycleStatus(m)}
+                          loading={updateMilestone.isPending}
+                        >
+                          {m.status === "pending"
+                            ? "Start"
+                            : m.status === "in_progress"
+                            ? "Complete"
+                            : "Resume"}
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
 }

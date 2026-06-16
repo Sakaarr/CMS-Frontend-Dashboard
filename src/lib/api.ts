@@ -22,6 +22,12 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (res) => res,
   async (error: AxiosError) => {
+    const originalRequest = error.config;
+
+    // Skip auth endpoints
+    if (originalRequest?.url?.includes("/auth/")) {
+      return Promise.reject(error);
+    }
     if (error.response?.status === 401) {
       const refresh = localStorage.getItem("refresh_token");
       if (refresh) {
