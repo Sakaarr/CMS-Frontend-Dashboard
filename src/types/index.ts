@@ -166,6 +166,28 @@ export interface BOQSummary {
   variance: number;
 }
 
+// ── Approvals Inbox ──────────────────────────────────────────────
+export interface ApprovalInboxItem {
+  id: string;
+  module: "finance" | "procurement" | "inventory" | "boq" | "documents" | string;
+  item_type: string;
+  title: string;
+  subtitle: string | null;
+  status: string;
+  project_id: string | null;
+  project_name: string | null;
+  project_code: string | null;
+  created_at: string;
+  action_url: string | null;
+  meta: Record<string, string | number | null>;
+}
+
+export interface ApprovalInboxResponse {
+  total: number;
+  counts: Record<string, number>;
+  items: ApprovalInboxItem[];
+}
+
 // ── Shared ────────────────────────────────────────────────────────
 export interface APIResponse<T> {
   success: boolean;
