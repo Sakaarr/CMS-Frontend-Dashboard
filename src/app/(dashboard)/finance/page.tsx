@@ -43,7 +43,6 @@ import {
     XAxis, YAxis
 } from "recharts";
 import { PermissionGuard } from "@/components/layouts/PermissionGuard";
-import { apiClient } from "@/lib/api";
 
 const TABS = [
   "Overview", "Invoices", "Expenses",
@@ -457,13 +456,7 @@ function FinancePageContent() {
                             size="sm"
                             variant="outline"
                             loading={submitInvoice?.isPending}
-                            onClick={async () => {
-                              try {
-                                await apiClient.post(`/invoices/${inv.id}/submit`);
-                                qc.invalidateQueries({ queryKey: ["invoices", projectId] });
-                                qc.invalidateQueries({ queryKey: ["finance-summary", projectId] });
-                              } catch {}
-                            }}
+                            onClick={() => submitInvoice.mutate(inv.id)}
                           >
                             <Send className="h-3 w-3 mr-1" /> Submit
                           </Button>

@@ -8,6 +8,16 @@ import {
 import { useAuthStore } from "@/store/auth.store";
 import { useEffect } from "react";
 
+export const APPROVAL_INBOX_MODULES = [
+  "can_boq",
+  "can_procurement",
+  "can_inventory",
+  "can_site_ops",
+  "can_finance",
+  "can_quality",
+  "can_documents",
+] as const;
+
 export function useFetchPermissions() {
   const { isAuthenticated, user } = useAuthStore();
   const { setPermissions } = usePermissionsStore();
@@ -17,7 +27,7 @@ export function useFetchPermissions() {
     if (user?.is_superadmin) {
       setPermissions(FULL_ACCESS);
     }
-  }, [user?.is_superadmin]);
+  }, [setPermissions, user?.is_superadmin]);
 
   return useQuery({
     queryKey: ["my-permissions"],
@@ -42,4 +52,12 @@ export function useHasPermission(
   // Superadmin bypasses all checks
   if (user?.is_superadmin) return true;
   return permissions[module] ?? false;
+}
+
+export function useHasApprovalInboxAccess(): boolean {
+  const { user } = useAuthStore();
+  const { permissions } = usePermissionsStore();
+
+  if (user?.is_superadmin) return true;
+  return APPROVAL_INBOX_MODULES.some((key) => permissions[key]);
 }

@@ -5,12 +5,18 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
 import { useLogout } from "@/hooks/useAuth";
-import { useHasPermission, useFetchPermissions } from "@/hooks/usePermissions";
+import { useApprovalsInbox } from "@/hooks/useApprovals";
+import {
+  useHasPermission,
+  useFetchPermissions,
+  useHasApprovalInboxAccess,
+} from "@/hooks/usePermissions";
+import type { ModulePermissions } from "@/store/permissions.store";
 import {
   LayoutDashboard, FolderKanban, FileSpreadsheet,
   ShoppingCart, Package, HardHat, FileText,
   DollarSign, LogOut, Building2, Settings,
-  ShieldCheck, Users,
+  ShieldCheck, Users, Inbox,
 } from "lucide-react";
 import { useBrandingStore } from "@/hooks/useBranding";
 
@@ -33,6 +39,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { label: "Finance", href: "/finance", icon: DollarSign, permissionKey: "can_finance" },
   { label: "Quality & Safety", href: "/quality", icon: ShieldCheck, permissionKey: "can_quality" },
   { label: "Documents", href: "/documents", icon: FileText, permissionKey: "can_documents" },
+  { label: "Approvals Inbox", href: "/approvals", icon: Inbox },
   { label: "Company Settings",href: "/company-settings",icon: Settings,adminOnly: true,},
   { label: "User Management", href: "/users", icon: Users, adminOnly: true },
 ];
@@ -46,6 +53,9 @@ export function Sidebar() {
   const { user } = useAuthStore();
   const logout = useLogout();
   const { branding } = useBrandingStore();
+  const hasApprovalInboxAccess = useHasApprovalInboxAccess();
+  const { data: approvalsInbox } = useApprovalsInbox(1, hasApprovalInboxAccess);
+  const approvalsCount = approvalsInbox?.total ?? 0;
 
   // Fetch permissions on mount — keeps them fresh
   useFetchPermissions();
@@ -54,6 +64,7 @@ export function Sidebar() {
 
   // Filter nav items based on permissions
   const visibleItems = ALL_NAV_ITEMS.filter(item => {
+    if (item.href === "/approvals" && !hasApprovalInboxAccess) return false;
     if (item.superAdminOnly && !user?.is_superadmin) return false;
     if (item.adminOnly) {
       // Show User Management only to company_admin or superadmin
@@ -61,7 +72,7 @@ export function Sidebar() {
       return true; // refined below in render
     }
     if (!item.permissionKey) return true; // always visible (overview, projects)
-    return hasPermission(item.permissionKey as any);
+    return hasPermission(item.permissionKey as keyof ModulePermissions);
   });
 
   return (
@@ -95,10 +106,11 @@ export function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-0.5">
-          {visibleItems.map(({ label, href, icon: Icon, adminOnly }) => {
+          {visibleItems.map(({ label, href, icon: Icon }) => {
             // Hide User Management for non-admin non-superadmin
             // The backend will also enforce this
             const active = pathname === href || pathname.startsWith(href + "/");
+            const isApprovalsInbox = href === "/approvals";
             return (
               <li key={href}>
                 <Link
@@ -109,9 +121,21 @@ export function Sidebar() {
                       ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium"
                       : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
                   )}
-                >
+                  >
                   <Icon className="h-4 w-4 flex-shrink-0" />
                   <span className="flex-1">{label}</span>
+                  {isApprovalsInbox && hasApprovalInboxAccess && (
+                    <span
+                      className={cn(
+                        "ml-2 inline-flex min-w-7 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums",
+                        approvalsCount > 0
+                          ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                          : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                      )}
+                    >
+                      {approvalsCount}
+                    </span>
+                  )}
                 </Link>
               </li>
             );
