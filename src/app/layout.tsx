@@ -7,7 +7,7 @@ import { ThemeProvider } from "@/components/layouts/ThemeProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "CMS Platform",
+  title: "Construction Management System",
   description: "Construction Management System",
 };
 
