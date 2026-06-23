@@ -6,6 +6,7 @@ import {
   useBudgetVersions, useBOQItems,
   useBOQSummary, useCreateBudgetVersion,
   useCreateBOQItem, useApproveBudgetVersion,
+  useImportBOQItems,
 } from "@/hooks/useBoq";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,10 @@ function BOQPageContent() {
   const [selectedVersionId, setSelectedVersionId] = useState("");
   const [showNewVersion, setShowNewVersion] = useState(false);
   const [showNewItem, setShowNewItem] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
 
   const { data: versions, isLoading: versionsLoading } = useBudgetVersions(selectedProjectId);
   const { data: items, isLoading: itemsLoading } = useBOQItems(selectedVersionId);
@@ -53,6 +58,7 @@ function BOQPageContent() {
   const createVersion = useCreateBudgetVersion(selectedProjectId);
   const createItem = useCreateBOQItem(selectedProjectId, selectedVersionId);
   const approveVersion = useApproveBudgetVersion(selectedProjectId);
+  const importItems = useImportBOQItems(selectedProjectId, selectedVersionId);
 
   const { register: regV, handleSubmit: handleV, reset: resetV } = useForm();
   const { register: regI, handleSubmit: handleI, reset: resetI } = useForm();
@@ -239,11 +245,77 @@ function BOQPageContent() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="dark:text-gray-100">Bill of Quantities ({summary?.items_count ?? 0} items)</CardTitle>
-              <Button size="sm" onClick={() => setShowNewItem(true)}>
-                <Plus className="h-4 w-4 mr-1" /> Add item
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" onClick={() => { setShowImport(!showImport); setShowNewItem(false); }}>
+                  <Plus className="h-4 w-4 mr-1" /> Import Excel
+                </Button>
+                <Button size="sm" onClick={() => { setShowNewItem(true); setShowImport(false); }}>
+                  <Plus className="h-4 w-4 mr-1" /> Add item
+                </Button>
+              </div>
             </div>
           </CardHeader>
+
+          {/* Import from Excel */}
+          {showImport && (
+            <div className="mx-6 mb-4 rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-800/50">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Upload an Excel file (.xlsx) with columns: item_number, description, unit, quantity, unit_rate, etc.
+              </p>
+              <input
+                type="file" accept=".xlsx,.xls"
+                className="block w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-300"
+                onChange={e => {
+                  const f = e.target.files?.[0];
+                  setImportFile(f ?? null);
+                  setImportResult(null);
+                  setImportError(null);
+                }}
+              />
+              {importFile && (
+                <div className="mt-3">
+                  <p className="text-xs text-gray-500 mb-2">
+                    File selected: {importFile.name} ({(importFile.size / 1024).toFixed(1)} KB)
+                  </p>
+                  {importError && (
+                    <p className="text-xs text-red-600 dark:text-red-400 mb-2">
+                      ✕ {importError}
+                    </p>
+                  )}
+                  {importResult && (
+                    <p className="text-xs text-green-600 dark:text-green-400 mb-2">
+                      ✓ {importResult.imported} items imported
+                      {importResult.skipped > 0 && `, ${importResult.skipped} skipped`}
+                    </p>
+                  )}
+                  {!importResult && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        loading={importItems.isPending}
+                        onClick={async () => {
+                          if (!importFile) return;
+                          try {
+                            const res = await importItems.mutateAsync(importFile);
+                            setImportResult({ imported: res.data.data.imported, skipped: res.data.data.skipped });
+                            setImportFile(null);
+                            setImportError(null);
+                          } catch (e: any) {
+                            setImportError(e?.response?.data?.message ?? "Import failed");
+                          }
+                        }}
+                      >
+                        Import
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => { setShowImport(false); setImportFile(null); setImportResult(null); setImportError(null); }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* New item form */}
           {showNewItem && (
