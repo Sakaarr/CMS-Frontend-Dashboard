@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import type { ElementType } from "react";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useApprovalsInbox } from "@/hooks/useApprovals";
 import { useHasApprovalInboxAccess } from "@/hooks/usePermissions";
+import { apiClient } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +14,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   AlertCircle,
   ArrowRight,
+  Check,
   ClipboardList,
   Clock3,
   FileText,
@@ -18,8 +22,10 @@ import {
   Loader2,
   Package,
   ShoppingCart,
+  X,
   FileSpreadsheet,
 } from "lucide-react";
+import type { ApprovalInboxItem } from "@/types";
 
 const MODULE_LABELS: Record<string, string> = {
   finance: "Finance",
@@ -52,9 +58,86 @@ function formatMeta(item: { meta: Record<string, string | number | null> }) {
   return null;
 }
 
+function itemActionEndpoints(item: ApprovalInboxItem): {
+  approve?: { url: string; method: "post" | "patch"; body?: Record<string, unknown> };
+  reject?: { url: string; method: "post" | "patch"; body?: Record<string, unknown> };
+} {
+  const id = item.id;
+  const docId = item.meta?.document_id;
+  switch (item.item_type) {
+    case "purchase_order_approval":
+      return {
+        approve: { url: `/purchase-orders/${id}/approve`, method: "post" },
+        reject: { url: `/purchase-orders/${id}/reject`, method: "post", body: { reason: "" } },
+      };
+    case "invoice_approval":
+      return {
+        approve: { url: `/invoices/${id}/approve`, method: "post" },
+        reject: { url: `/invoices/${id}/reject`, method: "post", body: { reason: "" } },
+      };
+    case "expense_approval":
+      return {
+        approve: { url: `/expenses/${id}/approve`, method: "post" },
+        reject: { url: `/expenses/${id}/reject`, method: "post", body: { reason: "" } },
+      };
+    case "change_order_approval":
+      return {
+        approve: { url: `/change-orders/${id}/approve`, method: "post" },
+        reject: { url: `/change-orders/${id}/reject`, method: "post", body: { reason: "" } },
+      };
+    case "material_request_approval":
+      return {
+        reject: { url: `/material-requests/${id}/reject`, method: "post", body: { reason: "" } },
+      };
+    case "budget_version_approval":
+      return {
+        approve: { url: `/budget-versions/${id}/approve`, method: "post" },
+      };
+    case "document_review":
+      if (!docId || typeof docId !== "string") return {};
+      return {
+        approve: { url: `/documents/${docId}/approvals/${id}`, method: "patch", body: { status: "approved" } },
+        reject: { url: `/documents/${docId}/approvals/${id}`, method: "patch", body: { status: "rejected", comments: "" } },
+      };
+    default:
+      return {};
+  }
+}
+
 export default function ApprovalsInboxPage() {
   const hasAccess = useHasApprovalInboxAccess();
   const { data, isLoading, isError } = useApprovalsInbox(100, hasAccess);
+  const queryClient = useQueryClient();
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  const performAction = async (item: ApprovalInboxItem, action: "approve" | "reject") => {
+    const endpoints = itemActionEndpoints(item);
+    const ep = endpoints[action];
+    if (!ep) return;
+
+    const label = action === "approve" ? "approve" : "reject";
+    const confirmMsg = `Are you sure you want to ${label} "${item.title}"?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    const key = `${item.id}-${action}`;
+    setActionLoading(key);
+    setFeedback(null);
+
+    try {
+      if (ep.method === "post") {
+        await apiClient.post(ep.url, ep.body);
+      } else {
+        await apiClient.patch(ep.url, ep.body);
+      }
+      setFeedback({ type: "success", message: `Item ${action === "approve" ? "approved" : "rejected"} successfully` });
+      queryClient.invalidateQueries({ queryKey: ["approvals-inbox"] });
+    } catch (e: any) {
+      setFeedback({ type: "error", message: e?.response?.data?.message ?? `Failed to ${label}` });
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   if (!hasAccess) {
     return (
@@ -104,6 +187,18 @@ export default function ApprovalsInboxPage() {
           </p>
         </div>
       </div>
+
+      {feedback && (
+        <div
+          className={`rounded-2xl border px-4 py-3 text-sm ${
+            feedback.type === "success"
+              ? "border-green-200 bg-green-50 text-green-700 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-300"
+              : "border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300"
+          }`}
+        >
+          {feedback.message}
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {Object.entries(MODULE_LABELS).map(([key, label]) => {
@@ -164,6 +259,11 @@ export default function ApprovalsInboxPage() {
                 const moduleLabel = MODULE_LABELS[item.module] ?? item.module;
                 const Icon = MODULE_ICONS[item.module] ?? ClipboardList;
                 const metaAmount = formatMeta(item);
+                const endpoints = itemActionEndpoints(item);
+                const appKey = `${item.id}-approve`;
+                const rejKey = `${item.id}-reject`;
+                const isApproving = actionLoading === appKey;
+                const isRejecting = actionLoading === rejKey;
 
                 return (
                   <div
@@ -196,6 +296,28 @@ export default function ApprovalsInboxPage() {
                       </div>
 
                       <div className="flex items-center gap-2 lg:shrink-0">
+                        {endpoints.approve && (
+                          <Button
+                            onClick={() => performAction(item, "approve")}
+                            loading={isApproving}
+                            disabled={isRejecting}
+                            variant="success"
+                          >
+                            <Check className="mr-1.5 h-4 w-4" />
+                            Approve
+                          </Button>
+                        )}
+                        {endpoints.reject && (
+                          <Button
+                            onClick={() => performAction(item, "reject")}
+                            loading={isRejecting}
+                            disabled={isApproving}
+                            variant="danger"
+                          >
+                            <X className="mr-1.5 h-4 w-4" />
+                            Reject
+                          </Button>
+                        )}
                         {item.action_url ? (
                           <Link
                             href={item.action_url}
