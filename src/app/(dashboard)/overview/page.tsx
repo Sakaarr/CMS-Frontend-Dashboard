@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useProjectStats, useProjects } from "@/hooks/useProjects";
+import { useProjects } from "@/hooks/useProjects";
+import { useDashboardOverview } from "@/hooks/useDashboard";
 import { useAuthStore } from "@/store/auth.store";
 import { useThemeStore } from "@/store/theme.store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Loader2, TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, ArrowRight, Bell, Package } from "lucide-react";
 import Link from "next/link";
 import Chart from "chart.js/auto";
 
@@ -75,9 +76,11 @@ function Legend({ items }: { items: { color: string; label: string }[] }) {
 export default function OverviewPage() {
   const { user } = useAuthStore();
   const { theme } = useThemeStore();
-  const { data: stats, isLoading: statsLoading } = useProjectStats();
+  const { data: dash, isLoading: dashLoading } = useDashboardOverview();
   const { data: projects, isLoading: projectsLoading } = useProjects({ page: 1 });
   const chartsRef = useRef<Record<string, Chart>>({});
+  const stats = dash?.project_stats;
+  const statsLoading = dashLoading;
 
   const isDark =
     theme === "dark" ||
@@ -190,19 +193,24 @@ export default function OverviewPage() {
       });
     }
 
-    // 3 — Cashflow area chart (mock trend data)
+    // 3 — Cashflow area chart (real data from API)
     destroyChart("cashflow-area");
     const cashEl = document.getElementById("cashflow-area") as HTMLCanvasElement;
-    if (cashEl) {
-      const months = ["Nov", "Dec", "Jan", "Feb", "Mar", "Apr"];
+    if (cashEl && dash?.monthly_cashflow?.length) {
+      const cf = dash.monthly_cashflow;
+      const labels = cf.map(m => {
+        const [y, mo] = m.month.split("-");
+        const d = new Date(+y, +mo - 1);
+        return d.toLocaleDateString("en", { month: "short" });
+      });
       chartsRef.current["cashflow-area"] = new Chart(cashEl, {
         type: "line",
         data: {
-          labels: months,
+          labels,
           datasets: [
             {
               label: "Invoiced",
-              data: [4.2, 5.1, 3.8, 6.2, 5.5, 7.1],
+              data: cf.map(m => Math.round(m.invoiced / 1_000_000 * 10) / 10),
               borderColor: "#3b82f6",
               backgroundColor: isDark ? "rgba(59,130,246,0.08)" : "rgba(59,130,246,0.06)",
               fill: true,
@@ -213,7 +221,7 @@ export default function OverviewPage() {
             },
             {
               label: "Received",
-              data: [3.1, 4.2, 3.0, 5.1, 4.8, 6.2],
+              data: cf.map(m => Math.round(m.received / 1_000_000 * 10) / 10),
               borderColor: "#10b981",
               backgroundColor: isDark ? "rgba(16,185,129,0.08)" : "rgba(16,185,129,0.06)",
               fill: true,
@@ -224,7 +232,7 @@ export default function OverviewPage() {
             },
             {
               label: "Expenses",
-              data: [1.8, 2.1, 1.5, 2.8, 2.3, 3.1],
+              data: cf.map(m => Math.round(m.expenses / 1_000_000 * 10) / 10),
               borderColor: "#ef4444",
               backgroundColor: isDark ? "rgba(239,68,68,0.08)" : "rgba(239,68,68,0.06)",
               fill: true,
@@ -247,7 +255,7 @@ export default function OverviewPage() {
               grid: { color: c.grid },
               ticks: {
                 color: c.tick, font: { size: 11 },
-                callback: (v: any) => `${v}M`,
+                callback: (v: any) => `NPR ${v}M`,
               },
             },
           },
@@ -255,54 +263,30 @@ export default function OverviewPage() {
       });
     }
 
-    // 4 — Labour attendance bar (last 14 days)
-    destroyChart("labour-bar");
-    const labourEl = document.getElementById("labour-bar") as HTMLCanvasElement;
-    if (labourEl) {
-      const days = Array.from({ length: 14 }, (_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (13 - i));
-        return d.toLocaleDateString("en", { day: "numeric" });
-      });
-      const workers = [42, 38, 0, 44, 41, 39, 43, 0, 47, 45, 42, 38, 44, 46];
-      chartsRef.current["labour-bar"] = new Chart(labourEl, {
-        type: "bar",
-        data: {
-          labels: days,
-          datasets: [{
-            label: "Workers",
-            data: workers,
-            backgroundColor: workers.map(v =>
-              v === 0
-                ? (isDark ? "#374151" : "#e5e7eb")
-                : (isDark ? "rgba(99,102,241,0.7)" : "rgba(99,102,241,0.6)")
-            ),
-            borderRadius: 3,
-            borderSkipped: false,
-          }],
-        },
-        options: {
-          ...baseOpts,
-          scales: {
-            x: { grid: { display: false }, ticks: { color: c.tick, font: { size: 10 }, autoSkip: false } },
-            y: { grid: { color: c.grid }, ticks: { color: c.tick, font: { size: 11 } } },
-          },
-        },
-      });
-    }
-
-    // 5 — Procurement pipeline horizontal
+    // 4 — Procurement pipeline (real data)
     destroyChart("procurement-pipe");
     const procEl = document.getElementById("procurement-pipe") as HTMLCanvasElement;
-    if (procEl) {
+    if (procEl && dash?.procurement_pipeline) {
+      const pipe = dash.procurement_pipeline.by_status;
+      const STATUS_LABELS: Record<string, string> = {
+        draft: "Draft", pending_approval: "Pending", approved: "Approved",
+        sent: "Sent", partially_received: "Partial", fully_received: "Complete",
+        cancelled: "Cancelled",
+      };
+      const STATUS_COLORS: Record<string, string> = {
+        draft: "#e2e8f0", pending_approval: "#fbbf24", approved: "#3b82f6",
+        sent: "#8b5cf6", partially_received: "#f97316", fully_received: "#10b981",
+        cancelled: "#ef4444",
+      };
+      const entries = Object.entries(pipe).sort(([, a], [, b]) => b.count - a.count);
       chartsRef.current["procurement-pipe"] = new Chart(procEl, {
         type: "bar",
         data: {
-          labels: ["Draft", "Pending", "Approved", "Partial", "Complete"],
+          labels: entries.map(([k]) => STATUS_LABELS[k] ?? k),
           datasets: [{
             label: "POs",
-            data: [12, 5, 8, 3, 14],
-            backgroundColor: ["#e2e8f0", "#fbbf24", "#3b82f6", "#8b5cf6", "#10b981"],
+            data: entries.map(([, v]) => v.count),
+            backgroundColor: entries.map(([k]) => STATUS_COLORS[k] ?? "#94a3b8"),
             borderRadius: 4,
             borderSkipped: false,
           }],
@@ -318,17 +302,20 @@ export default function OverviewPage() {
       });
     }
 
-    // 6 — Progress radar-style (use grouped bar as simple alt)
+    // 5 — Module activity radar (real data)
     destroyChart("module-activity");
     const actEl = document.getElementById("module-activity") as HTMLCanvasElement;
-    if (actEl) {
+    if (actEl && dash?.module_activity) {
+      const ma = dash.module_activity;
+      const maxVal = Math.max(ma.projects, ma.procurement, ma.finance, ma.site_ops, ma.inventory, ma.quality, 1);
+      const pct = (v: number) => Math.round(v / maxVal * 100);
       chartsRef.current["module-activity"] = new Chart(actEl, {
         type: "radar",
         data: {
-          labels: ["Projects", "BOQ", "Procurement", "Inventory", "Site Ops", "Finance"],
+          labels: ["Projects", "Procurement", "Finance", "Site Ops", "Inventory", "Quality"],
           datasets: [{
             label: "Activity",
-            data: [85, 60, 72, 45, 90, 55],
+            data: [pct(ma.projects), pct(ma.procurement), pct(ma.finance), pct(ma.site_ops), pct(ma.inventory), pct(ma.quality)],
             borderColor: "#3b82f6",
             backgroundColor: isDark ? "rgba(59,130,246,0.15)" : "rgba(59,130,246,0.1)",
             borderWidth: 2,
@@ -349,10 +336,12 @@ export default function OverviewPage() {
       });
     }
 
+
+
     return () => {
       Object.keys(chartsRef.current).forEach(destroyChart);
     };
-  }, [statsLoading, projectsLoading, isDark, stats, projects]);
+  }, [dashLoading, projectsLoading, isDark, dash, projects]);
   const hour = new Date().getHours();
 
   const greeting =
@@ -408,6 +397,43 @@ export default function OverviewPage() {
           </>
         )}
       </div>
+      {/* Secondary KPI strip */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {dashLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-20 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+          ))
+        ) : (
+          <>
+            <KPICard
+              label="Pending approvals"
+              value={String(dash?.pending_approvals ?? 0)}
+              sub="Awaiting review"
+              color="text-amber-600 dark:text-amber-400"
+            />
+            <KPICard
+              label="Low stock alerts"
+              value={String(dash?.low_stock_count ?? 0)}
+              sub="Items below reorder level"
+              color="text-red-600 dark:text-red-400"
+            />
+            <KPICard
+              label="Total POs"
+              value={String(dash?.procurement_pipeline?.total_pos ?? 0)}
+              sub={`Value ${formatCurrency(dash?.procurement_pipeline?.total_po_value ?? 0)}`}
+              color="text-indigo-600 dark:text-indigo-400"
+            />
+            <KPICard
+              label="Total invoiced"
+              value={formatCurrency(
+                dash?.monthly_cashflow?.reduce((s, m) => s + m.invoiced, 0) ?? 0
+              )}
+              sub="All time"
+              color="text-emerald-600 dark:text-emerald-400"
+            />
+          </>
+        )}
+      </div>
 
       {/* Row 1 — Donut + Budget bar */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -459,27 +485,14 @@ export default function OverviewPage() {
         </CardContent>
       </Card>
 
-      {/* Row 3 — Labour + Procurement + Radar */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="dark:bg-gray-900 dark:border-gray-800">
-          <CardHeader>
-            <CardTitle className="dark:text-gray-100">Labour attendance (14d)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Legend items={[
-              { color: "#6366f1", label: "Working days" },
-              { color: "#e5e7eb", label: "Weekend / holiday" },
-            ]} />
-            <ChartCanvas id="labour-bar" height={160} />
-          </CardContent>
-        </Card>
-
+      {/* Row 3 — Procurement Pipeline + Module Activity */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card className="dark:bg-gray-900 dark:border-gray-800">
           <CardHeader>
             <CardTitle className="dark:text-gray-100">Procurement pipeline</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartCanvas id="procurement-pipe" height={160} />
+            <ChartCanvas id="procurement-pipe" height={180} />
           </CardContent>
         </Card>
 
@@ -488,7 +501,7 @@ export default function OverviewPage() {
             <CardTitle className="dark:text-gray-100">Module activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartCanvas id="module-activity" height={160} />
+            <ChartCanvas id="module-activity" height={180} />
           </CardContent>
         </Card>
       </div>
@@ -507,13 +520,13 @@ export default function OverviewPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {projectsLoading ? (
+          {dashLoading ? (
             <div className="flex justify-center py-6">
               <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
             </div>
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
-              {projects?.data.slice(0, 6).map(p => (
+              {dash?.recent_projects?.map(p => (
                 <Link
                   key={p.id}
                   href={`/projects/${p.id}`}

@@ -188,6 +188,110 @@ export interface ApprovalInboxResponse {
   items: ApprovalInboxItem[];
 }
 
+// ── Dashboard Overview ──────────────────────────────────────────
+export interface MonthlyCashflow {
+  month: string;
+  invoiced: number;
+  received: number;
+  expenses: number;
+  labour_cost: number;
+}
+
+export interface PipelineStatus {
+  count: number;
+  value: number;
+}
+
+export interface ProcurementPipeline {
+  by_status: Record<string, PipelineStatus>;
+  total_po_value: number;
+  total_pos: number;
+}
+
+export interface ModuleActivity {
+  projects: number;
+  procurement: number;
+  finance: number;
+  site_ops: number;
+  inventory: number;
+  quality: number;
+}
+
+export interface RecentActivity {
+  id: string;
+  type: string;
+  label: string;
+  created_at: string;
+}
+
+export interface DashboardOverview {
+  project_stats: ProjectStats;
+  procurement_pipeline: ProcurementPipeline;
+  monthly_cashflow: MonthlyCashflow[];
+  pending_approvals: number;
+  recent_projects: Project[];
+  low_stock_count: number;
+  module_activity: ModuleActivity;
+  recent_activity: RecentActivity[];
+}
+
+export interface ProjectSnapshot {
+  id: string;
+  name: string;
+  code: string;
+  status: string;
+  progress_percentage: number;
+  estimated_budget: number;
+  approved_budget: number;
+  planned_start_date: string | null;
+  planned_end_date: string | null;
+}
+
+export interface HealthScore {
+  overall: number;
+  label: string;
+  schedule: number;
+  financial: number;
+  quality: number;
+  procurement: number;
+  safety: number;
+}
+
+export interface BurnRate {
+  approved_budget: number;
+  total_spent: number;
+  remaining_budget: number;
+  over_budget: boolean;
+  daily_burn: number;
+  expected_spend: number;
+  planned_progress_pct: number;
+  elapsed_days: number;
+  total_days: number;
+  variance: number;
+}
+
+export interface BudgetVsActual {
+  budget: number;
+  actual: number;
+  variance: number;
+  utilization_pct: number;
+  budget_version_name: string;
+  budget_version_number: number;
+}
+
+export interface ProjectDashboard {
+  finance: Record<string, any>;
+  procurement: Record<string, any>;
+  site_ops: Record<string, any>;
+  quality: Record<string, any>;
+  documents: Record<string, any>;
+  boq: Record<string, any> | null;
+  project: ProjectSnapshot;
+  health_score: HealthScore;
+  burn_rate: BurnRate | null;
+  budget_vs_actual: BudgetVsActual | null;
+}
+
 // ── Shared ────────────────────────────────────────────────────────
 export interface APIResponse<T> {
   success: boolean;
