@@ -12,10 +12,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, downloadFile } from "@/lib/utils";
 import {
   Plus, CheckCircle, Loader2, Send,
-  PackageCheck, FileText,
+  PackageCheck, FileText, FileDown,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 
@@ -484,6 +484,13 @@ export default function ProcurementPage() {
                             <PackageCheck className="h-3 w-3 mr-1" /> Receive
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => downloadFile(`/purchase-orders/${po.id}/pdf`, `po-${po.po_number}.pdf`)}
+                        >
+                          <FileDown className="h-3 w-3" />
+                        </Button>
                       </div>
                     </td>
                   </tr>

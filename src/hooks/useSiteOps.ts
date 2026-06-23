@@ -7,6 +7,7 @@ export interface DPRWorkItem {
   description: string;
   achieved_quantity: number;
   unit: string;
+  boq_item_id?: string | null;
 }
 
 export interface DPRAttendanceRecord {

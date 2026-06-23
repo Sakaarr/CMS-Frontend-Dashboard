@@ -11,8 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency } from "@/lib/utils";
-import { ChevronDown, ChevronRight, Plus, CheckCircle, Loader2 } from "lucide-react";
+import { formatCurrency, downloadFile } from "@/lib/utils";
+import { ChevronDown, ChevronRight, Plus, CheckCircle, Loader2, FileDown, FileSpreadsheet } from "lucide-react";
 import { useForm } from "react-hook-form";
 import {
   PieChart, Pie, Cell, Tooltip,
@@ -113,6 +113,26 @@ function BOQPageContent() {
               <Button variant="outline" onClick={() => setShowNewVersion(true)} size="sm">
                 <Plus className="h-4 w-4 mr-1" /> New version
               </Button>
+            )}
+            {selectedVersionId && (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm"
+                  onClick={() => downloadFile(
+                    `/projects/${selectedProjectId}/budget-versions/${selectedVersionId}/pdf`,
+                    `boq-${selectedVersionId.slice(0, 8)}.pdf`
+                  )}
+                >
+                  <FileDown className="h-4 w-4 mr-1" /> PDF
+                </Button>
+                <Button variant="outline" size="sm"
+                  onClick={() => downloadFile(
+                    `/projects/${selectedProjectId}/budget-versions/${selectedVersionId}/xlsx`,
+                    `boq-${selectedVersionId.slice(0, 8)}.xlsx`
+                  )}
+                >
+                  <FileSpreadsheet className="h-4 w-4 mr-1" /> Excel
+                </Button>
+              </div>
             )}
           </div>
 

@@ -21,11 +21,12 @@ import {
     useSubmitInvoice,
 } from "@/hooks/useFinance";
 import { useProjects } from "@/hooks/useProjects";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, downloadFile } from "@/lib/utils";
 import {
     AlertTriangle,
     CheckCircle,
     DollarSign,
+    FileDown,
     Loader2,
     Plus,
     TrendingDown,
@@ -480,6 +481,13 @@ function FinancePageContent() {
                             Record payment
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => downloadFile(`/invoices/${inv.id}/pdf`, `invoice-${inv.invoice_number}.pdf`)}
+                        >
+                          <FileDown className="h-3 w-3" />
+                        </Button>
                       </div>
                     </td>
                   </tr>
