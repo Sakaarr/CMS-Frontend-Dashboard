@@ -26,7 +26,7 @@ export default function SiteOpsPage() {
 
   const { data: projects } = useProjects();
   const { data: sites } = useSites(selectedProjectId);
-  const { data: dprsData, isLoading: dprsLoading } = useDPRs(selectedProjectId, selectedSiteId || undefined);
+  const { data: dprsData, isLoading: dprsLoading, isError: dprsError, error: dprsErrorObj } = useDPRs(selectedProjectId, selectedSiteId || undefined);
   const { data: dpr, isLoading: dprLoading } = useDPR(selectedDPRId);
   const { data: summary } = useSiteOpsSummary(selectedProjectId);
 
@@ -80,6 +80,16 @@ export default function SiteOpsPage() {
       setFormError(e?.response?.data?.message || "Failed to create DPR");
     }
   };
+
+  if (dprsError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
+        <div className="text-destructive text-4xl">!</div>
+        <h3 className="text-lg font-semibold">Failed to load data</h3>
+        <p className="text-muted-foreground text-sm">{(dprsErrorObj as Error)?.message || "An error occurred"}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -365,7 +375,6 @@ export default function SiteOpsPage() {
                       <CardTitle className="dark:text-gray-100">{formatDate(dpr.report_date)}</CardTitle>
                       <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 capitalize">
                         {dpr.weather} · {dpr.work_hours}h · {dpr.total_workers} workers
-                        {dpr.total_labour_cost > 0 && ` · NPR ${dpr.total_labour_cost.toLocaleString()}`}
                       </p>
                     </div>
                     {!dpr.is_submitted && (
@@ -378,7 +387,7 @@ export default function SiteOpsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-5">
-                  {dpr.work_items?.length > 0 && (
+                  {(dpr.work_items?.length ?? 0) > 0 && (
                     <div>
                       <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Work done</h4>
                       <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -391,7 +400,7 @@ export default function SiteOpsPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                            {dpr.work_items.map((w: any) => (
+                            {dpr.work_items?.map((w: any) => (
                               <tr key={w.id}>
                                 <td className="px-3 py-2 text-gray-900 dark:text-gray-100">{w.description}</td>
                                 <td className="px-3 py-2 text-right font-medium">{w.achieved_quantity}</td>
@@ -404,10 +413,10 @@ export default function SiteOpsPage() {
                     </div>
                   )}
 
-                  {dpr.attendance_records?.length > 0 && (
+                  {(dpr.attendance_records?.length ?? 0) > 0 && (
                     <div>
                       <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                        Labour attendance ({dpr.attendance_records.length})
+                        Labour attendance ({dpr.attendance_records?.length ?? 0})
                       </h4>
                       <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                         <table className="w-full text-xs">
@@ -420,7 +429,7 @@ export default function SiteOpsPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                            {dpr.attendance_records.map((a: any) => (
+                            {dpr.attendance_records?.map((a: any) => (
                               <tr key={a.id}>
                                 <td className="px-3 py-2 text-gray-900 dark:text-gray-100">{a.worker_name}</td>
                                 <td className="px-3 py-2 text-gray-600 dark:text-gray-400">{a.trade}</td>

@@ -29,10 +29,10 @@ export default function InventoryPage() {
   const [formError, setFormError] = useState("");
 
   const { data: projects } = useProjects();
-  const { data: warehouses, isLoading: whLoading } = useWarehouses(selectedProjectId || undefined);
-  const { data: stock, isLoading: stockLoading } = useStock(selectedWarehouseId);
+  const { data: warehouses, isLoading: whLoading, isError: whError } = useWarehouses(selectedProjectId || undefined);
+  const { data: stock, isLoading: stockLoading, isError: stockError } = useStock(selectedWarehouseId);
   const { data: alerts } = useLowStockAlerts(selectedProjectId || undefined);
-  const { data: mrs, isLoading: mrsLoading } = useMaterialRequests(selectedProjectId);
+  const { data: mrs, isLoading: mrsLoading, isError: mrsError } = useMaterialRequests(selectedProjectId);
 
   const createWarehouse = useCreateWarehouse();
   const recordTransaction = useRecordTransaction(selectedWarehouseId);
@@ -44,6 +44,16 @@ export default function InventoryPage() {
   const { register: regWH, handleSubmit: handleWH, reset: resetWH } = useForm();
   const { register: regAdj, handleSubmit: handleAdj, reset: resetAdj } = useForm();
   const { register: regMR, handleSubmit: handleMR, reset: resetMR } = useForm();
+
+  if (whError || stockError || mrsError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
+        <div className="text-destructive text-4xl">!</div>
+        <h3 className="text-lg font-semibold">Failed to load data</h3>
+        <p className="text-muted-foreground text-sm">An error occurred while loading inventory data</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

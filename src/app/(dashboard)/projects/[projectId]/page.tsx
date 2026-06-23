@@ -516,7 +516,7 @@ export default function ProjectDetailPage() {
 
       {/* ── Sites tab ── */}
       {tab === "Sites" && (
-        <SitesTab projectId={project.id} tenantCurrency={project.currency} />
+        <SitesTab projectId={project.id} />
       )}
 
       {tab === "Milestones" && (

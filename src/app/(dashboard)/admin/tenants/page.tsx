@@ -184,17 +184,7 @@ export default function TenantsAdminPage() {
                     >
                       {t.plan}
                     </span>
-                    <Badge
-                      variant={
-                        t.status === "active"
-                          ? "success"
-                          : t.status === "suspended"
-                          ? "destructive"
-                          : "secondary"
-                      }
-                    >
-                      {t.status}
-                    </Badge>
+                    <Badge status={t.status} />
                     {t.status === "suspended" ? (
                       <Button
                         size="sm"

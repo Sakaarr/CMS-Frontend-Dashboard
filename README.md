@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CMS Platform — Web Dashboard
 
-## Getting Started
+Next.js dashboard for the Construction Management System.
 
-First, run the development server:
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router)
+- **Language:** TypeScript
+- **UI:** Tailwind CSS 4, Radix UI primitives
+- **Charts:** Chart.js, Recharts
+- **State:** Zustand (client state), TanStack React Query (server state)
+- **Forms:** React Hook Form + Zod
+
+## Quick Start
 
 ```bash
+# Install dependencies
+npm install
+
+# Start dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The app runs on `http://localhost:3000` and expects the API at `http://localhost:8000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create `.env.local`:
 
-## Learn More
+| Variable | Default | Description |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Backend API base URL |
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+├── app/
+│   ├── (auth)/login/          # Login page
+│   ├── (dashboard)/           # Authenticated pages
+│   │   ├── overview/          # KPI dashboard
+│   │   ├── projects/          # Project management
+│   │   ├── boq/               # Bill of Quantities
+│   │   ├── procurement/       # Procurement pipeline
+│   │   ├── inventory/         # Inventory & MRs
+│   │   ├── site-ops/          # Daily Progress Reports
+│   │   ├── finance/           # Financial management
+│   │   ├── quality/           # Quality & safety
+│   │   ├── documents/         # Document management
+│   │   ├── approvals/         # Approval inbox
+│   │   ├── users/             # User management
+│   │   └── company-settings/  # Branding & settings
+│   └── layout.tsx             # Root layout
+├── components/
+│   ├── layouts/               # Sidebar, providers, theme
+│   └── ui/                    # Reusable components
+├── hooks/                     # React Query hooks
+├── lib/                       # API client, utilities
+├── store/                     # Zustand stores
+└── types/                     # TypeScript interfaces
+```

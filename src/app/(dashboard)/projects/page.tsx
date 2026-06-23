@@ -23,7 +23,7 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
 
-  const { data, isLoading } = useProjects({ status: status || undefined, search });
+  const { data, isLoading, isError, error } = useProjects({ status: status || undefined, search });
   const createProject = useCreateProject();
   const { register, handleSubmit, reset } = useForm();
 
@@ -32,6 +32,16 @@ export default function ProjectsPage() {
     reset();
     setShowCreate(false);
   };
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
+        <div className="text-destructive text-4xl">!</div>
+        <h3 className="text-lg font-semibold">Failed to load data</h3>
+        <p className="text-muted-foreground text-sm">{(error as Error)?.message || "An error occurred"}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
