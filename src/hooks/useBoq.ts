@@ -95,3 +95,21 @@ export function useApproveBudgetVersion(projectId: string) {
       qc.invalidateQueries({ queryKey: ["budget-versions", projectId] }),
   });
 }
+
+export function useImportBOQItems(projectId: string, versionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return apiClient.post(
+        `/projects/${projectId}/budget-versions/${versionId}/import-items`,
+        fd,
+      );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["boq-items", versionId] });
+      qc.invalidateQueries({ queryKey: ["boq-summary", versionId] });
+    },
+  });
+}
