@@ -76,8 +76,8 @@ function Legend({ items }: { items: { color: string; label: string }[] }) {
 export default function OverviewPage() {
   const { user } = useAuthStore();
   const { theme } = useThemeStore();
-  const { data: dash, isLoading: dashLoading } = useDashboardOverview();
-  const { data: projects, isLoading: projectsLoading } = useProjects({ page: 1 });
+  const { data: dash, isLoading: dashLoading, isError: dashIsError, error: dashError } = useDashboardOverview();
+  const { data: projects, isLoading: projectsLoading, isError: projectsIsError, error: projectsError } = useProjects({ page: 1 });
   const chartsRef = useRef<Record<string, Chart>>({});
   const stats = dash?.project_stats;
   const statsLoading = dashLoading;
@@ -342,6 +342,16 @@ export default function OverviewPage() {
       Object.keys(chartsRef.current).forEach(destroyChart);
     };
   }, [dashLoading, projectsLoading, isDark, dash, projects]);
+  if (dashIsError || projectsIsError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
+        <div className="text-destructive text-4xl">!</div>
+        <h3 className="text-lg font-semibold">Failed to load data</h3>
+        <p className="text-muted-foreground text-sm">{(dashError || projectsError)?.message || "An error occurred"}</p>
+      </div>
+    );
+  }
+
   const hour = new Date().getHours();
 
   const greeting =

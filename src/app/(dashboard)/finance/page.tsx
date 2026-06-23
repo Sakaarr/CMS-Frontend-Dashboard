@@ -67,7 +67,7 @@ function FinancePageContent() {
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
 
   const { data: projects } = useProjects();
-  const { data: summary, isLoading: summaryLoading } = useFinanceSummary(projectId);
+  const { data: summary, isLoading: summaryLoading, isError: summaryError, error: summaryErrorObj } = useFinanceSummary(projectId);
   const { data: cashflow } = useCashflow(projectId);
   const { data: invoicesData } = useInvoices(projectId);
   const { data: expensesData } = useExpenses(projectId);
@@ -95,6 +95,16 @@ function FinancePageContent() {
   const inputCls = "h-10 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400";
   const selectCls = "h-10 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400";
   const labelCls = "text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1";
+
+  if (summaryError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
+        <div className="text-destructive text-4xl">!</div>
+        <h3 className="text-lg font-semibold">Failed to load data</h3>
+        <p className="text-muted-foreground text-sm">{(summaryErrorObj as Error)?.message || "An error occurred"}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

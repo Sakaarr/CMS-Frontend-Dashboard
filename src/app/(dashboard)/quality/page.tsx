@@ -61,7 +61,7 @@ function QualityPageContent() {
   const [showNewPunch, setShowNewPunch] = useState(false);
 
   const { data: projects } = useProjects();
-  const { data: summary } = useQualitySummary(projectId);
+  const { data: summary, isError: summaryError, error: summaryErrorObj } = useQualitySummary(projectId);
   const { data: inspectionsData } = useInspections(projectId);
   const { data: ncrsData } = useNCRs(projectId);
   const { data: incidentsData } = useIncidents(projectId);
@@ -85,6 +85,16 @@ function QualityPageContent() {
   const ncrs = ncrsData?.data ?? [];
   const incidents = incidentsData?.data ?? [];
   const punch = punchData?.data ?? [];
+
+  if (summaryError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
+        <div className="text-destructive text-4xl">!</div>
+        <h3 className="text-lg font-semibold">Failed to load data</h3>
+        <p className="text-muted-foreground text-sm">{(summaryErrorObj as Error)?.message || "An error occurred"}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

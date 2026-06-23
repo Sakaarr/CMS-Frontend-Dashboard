@@ -115,6 +115,7 @@ export function Sidebar() {
               <li key={href}>
                 <Link
                   href={href}
+                  aria-label={`Navigate to ${label}`}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
                     active
@@ -156,6 +157,7 @@ export function Sidebar() {
                   <li key={href}>
                     <Link
                       href={href}
+                      aria-label={`Navigate to ${label}`}
                       className={cn(
                         "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
                         active
@@ -204,6 +206,7 @@ export function Sidebar() {
           onClick={(e) => { e.preventDefault(); logout(); }}
           className="rounded p-1 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
           title="Logout"
+          aria-label="Logout"
         >
           <LogOut className="h-4 w-4" />
         </button>

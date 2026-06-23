@@ -52,8 +52,8 @@ function BOQPageContent() {
   const [importError, setImportError] = useState<string | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
 
-  const { data: versions, isLoading: versionsLoading } = useBudgetVersions(selectedProjectId);
-  const { data: items, isLoading: itemsLoading } = useBOQItems(selectedVersionId);
+  const { data: versions, isLoading: versionsLoading, isError: versionsError } = useBudgetVersions(selectedProjectId);
+  const { data: items, isLoading: itemsLoading, isError: itemsError } = useBOQItems(selectedVersionId);
   const { data: summary } = useBOQSummary(selectedVersionId);
   const createVersion = useCreateBudgetVersion(selectedProjectId);
   const createItem = useCreateBOQItem(selectedProjectId, selectedVersionId);
@@ -73,6 +73,16 @@ function BOQPageContent() {
     : [];
 
   const selectClass = "h-10 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400";
+
+  if (versionsError || itemsError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
+        <div className="text-destructive text-4xl">!</div>
+        <h3 className="text-lg font-semibold">Failed to load data</h3>
+        <p className="text-muted-foreground text-sm">An error occurred while loading BOQ data</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

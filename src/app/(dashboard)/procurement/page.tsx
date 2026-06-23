@@ -33,10 +33,10 @@ export default function ProcurementPage() {
   const [formError, setFormError] = useState("");
 
   const { data: projects } = useProjects();
-  const { data: vendors, isLoading: vendorsLoading } = useVendors();
-  const { data: pos, isLoading: posLoading } = usePurchaseOrders(selectedProjectId);
-  const { data: rfqs, isLoading: rfqsLoading } = useRFQs(selectedProjectId);
-  const { data: grns, isLoading: grnsLoading } = useGRNs(selectedProjectId);
+  const { data: vendors, isLoading: vendorsLoading, isError: vendorsError, error: vendorsErrorObj } = useVendors();
+  const { data: pos, isLoading: posLoading, isError: posError } = usePurchaseOrders(selectedProjectId);
+  const { data: rfqs, isLoading: rfqsLoading, isError: rfqsError } = useRFQs(selectedProjectId);
+  const { data: grns, isLoading: grnsLoading, isError: grnsError } = useGRNs(selectedProjectId);
   const { data: stats } = useProcurementStats(selectedProjectId);
 
   const approvePO = useApprovePO(selectedProjectId);
@@ -56,6 +56,16 @@ export default function ProcurementPage() {
   const approvedOrSentPOs = (pos ?? []).filter((p: any) =>
     ["approved", "sent", "partially_received"].includes(p.status)
   );
+
+  if (vendorsError || posError || rfqsError || grnsError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
+        <div className="text-destructive text-4xl">!</div>
+        <h3 className="text-lg font-semibold">Failed to load data</h3>
+        <p className="text-muted-foreground text-sm">{(vendorsErrorObj as Error)?.message || "An error occurred"}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
