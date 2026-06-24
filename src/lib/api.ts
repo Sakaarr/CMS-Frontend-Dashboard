@@ -43,11 +43,17 @@ apiClient.interceptors.response.use(
             return axios(error.config);
           }
         } catch {
-          localStorage.clear();
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          localStorage.removeItem("tenant_slug");
+          localStorage.removeItem("user");
           window.location.href = "/login";
         }
       } else {
-        localStorage.clear();
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        localStorage.removeItem("tenant_slug");
+        localStorage.removeItem("user");
         window.location.href = "/login";
       }
     }
