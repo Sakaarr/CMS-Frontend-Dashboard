@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  useUsers, useCreateUser, useUpdateUser,
+  useUsers, useCreateUser,
   useUpdatePermissions, useDeactivateUser,
   useResetUserPassword,
 } from "@/hooks/useUsers";
@@ -10,12 +10,11 @@ import { useAuthStore } from "@/store/auth.store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import type { ModulePermissions } from "@/store/permissions.store";
 import type { TenantUser } from "@/hooks/useUsers";
 import {
   Plus, Mail, KeyRound, UserX,
-  Settings, ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp,
   Loader2, Shield, CheckCircle,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -37,6 +36,7 @@ const MODULES: { key: keyof ModulePermissions; label: string; emoji: string }[] 
   { key: "can_inventory", label: "Inventory", emoji: "📦" },
   { key: "can_site_ops", label: "Site Operations", emoji: "🏗️" },
   { key: "can_finance", label: "Finance", emoji: "💰" },
+  { key: "can_subcontractors", label: "Subcontractors", emoji: "🏢" },
   { key: "can_quality", label: "Quality & Safety", emoji: "🛡️" },
   { key: "can_documents", label: "Documents", emoji: "📂" },
 ];
@@ -51,11 +51,17 @@ const ROLE_COLORS: Record<string, string> = {
   viewer: "bg-gray-100 text-gray-600",
 };
 
+type CreateUserFormValues = {
+  email: string;
+  full_name: string;
+  phone?: string;
+  role: string;
+};
+
 export default function UsersPage() {
   const { user: currentUser } = useAuthStore();
   const { data: users, isLoading } = useUsers();
   const createUser = useCreateUser();
-  const updateUser = useUpdateUser();
   const updatePerms = useUpdatePermissions();
   const deactivateUser = useDeactivateUser();
   const resetPassword = useResetUserPassword();
@@ -65,9 +71,9 @@ export default function UsersPage() {
   const [editingPerms, setEditingPerms] = useState<string | null>(null);
   const [localPerms, setLocalPerms] = useState<ModulePermissions | null>(null);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateUserFormValues>();
 
-  const handleCreateUser = async (data: any) => {
+  const handleCreateUser = async (data: CreateUserFormValues) => {
     await createUser.mutateAsync({
       email: data.email,
       full_name: data.full_name,
@@ -83,7 +89,7 @@ export default function UsersPage() {
     setLocalPerms(user.permissions ?? {
       can_projects: true, can_boq: false, can_procurement: false,
       can_inventory: false, can_site_ops: false, can_finance: false,
-      can_quality: false, can_documents: false,
+      can_quality: false, can_documents: false, can_subcontractors: false,
     });
   };
 

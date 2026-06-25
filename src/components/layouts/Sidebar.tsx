@@ -37,6 +37,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { label: "Inventory", href: "/inventory", icon: Package, permissionKey: "can_inventory" },
   { label: "Site Operations", href: "/site-ops", icon: HardHat, permissionKey: "can_site_ops" },
   { label: "Finance", href: "/finance", icon: DollarSign, permissionKey: "can_finance" },
+  { label: "Subcontractors", href: "/subcontractors", icon: Building2, permissionKey: "can_subcontractors" },
   { label: "Quality & Safety", href: "/quality", icon: ShieldCheck, permissionKey: "can_quality" },
   { label: "Documents", href: "/documents", icon: FileText, permissionKey: "can_documents" },
   { label: "Approvals Inbox", href: "/approvals", icon: Inbox },

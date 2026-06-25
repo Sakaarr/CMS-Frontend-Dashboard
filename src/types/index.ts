@@ -299,6 +299,97 @@ export interface APIResponse<T> {
   data: T;
 }
 
+// ── Subcontractors ────────────────────────────────────────────────
+export type SubcontractorStatus = "active" | "inactive" | "blacklisted";
+export type SubcontractorSpecialty =
+  | "structural" | "electrical" | "plumbing" | "hvac"
+  | "finishing" | "roofing" | "painting" | "landscaping"
+  | "general" | "other";
+
+export interface Subcontractor {
+  id: string;
+  name: string;
+  code: string;
+  specialty: SubcontractorSpecialty;
+  status: SubcontractorStatus;
+  contact_person: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  gst_number: string | null;
+  pan_number: string | null;
+  license_number: string | null;
+  insurance_provider: string | null;
+  insurance_valid_until: string | null;
+  rating: number;
+  notes: string | null;
+  is_approved: boolean;
+  created_at: string;
+}
+
+export type ContractStatus = "draft" | "active" | "completed" | "terminated" | "cancelled";
+
+export interface SubcontractorContract {
+  id: string;
+  project_id: string;
+  subcontractor_id: string;
+  contract_number: string;
+  title: string;
+  description: string | null;
+  status: ContractStatus;
+  scope_of_work: string | null;
+  contract_value: number;
+  currency: string;
+  start_date: string | null;
+  end_date: string | null;
+  payment_terms: string | null;
+  retention_percentage: number;
+  signed_date: string | null;
+  created_at: string;
+}
+
+export type WorkOrderStatus = "pending" | "in_progress" | "completed" | "cancelled";
+
+export interface WorkOrder {
+  id: string;
+  project_id: string;
+  contract_id: string;
+  work_order_number: string;
+  title: string;
+  description: string | null;
+  status: WorkOrderStatus;
+  amount: number;
+  currency: string;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
+  actual_start: string | null;
+  actual_end: string | null;
+  assigned_to: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+// ── Comments ──────────────────────────────────────────────────────
+export interface Comment {
+  id: string;
+  content: string;
+  author_id: string;
+  author_name: string | null;
+  author_avatar: string | null;
+  target_type: string;
+  target_id: string;
+  parent_id: string | null;
+  replies: Comment[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommentListResponse {
+  total: number;
+  data: Comment[];
+}
+
 export interface PaginatedResponse<T> {
   success: boolean;
   message: string;
