@@ -10,6 +10,7 @@ export interface ModulePermissions {
   can_finance: boolean;
   can_quality: boolean;
   can_documents: boolean;
+  can_subcontractors: boolean;
 }
 
 export const FULL_ACCESS: ModulePermissions = {
@@ -21,6 +22,7 @@ export const FULL_ACCESS: ModulePermissions = {
   can_finance: true,
   can_quality: true,
   can_documents: true,
+  can_subcontractors: true,
 };
 
 interface PermissionsState {

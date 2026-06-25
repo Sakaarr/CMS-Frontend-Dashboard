@@ -26,11 +26,12 @@ import {
 import Link from "next/link";
 import Chart from "chart.js/auto";
 import { Input } from "@/components/ui/input";
+import { CommentSection } from "@/components/comments/CommentSection";
 
 // ── Tab definitions ───────────────────────────────────────────────
 const TABS = [
   "Overview", "Sites", "Milestones", "BOQ",
-  "Procurement", "Inventory", "Site Ops", "Finance",
+  "Procurement", "Inventory", "Site Ops", "Finance", "Comments",
 ] as const;
 type Tab = typeof TABS[number];
 
@@ -670,6 +671,11 @@ export default function ProjectDetailPage() {
             </div>
           </Card>
         </div>
+      )}
+
+      {/* ── Comments tab ── */}
+      {tab === "Comments" && (
+        <CommentSection targetType="project" targetId={projectId} title="Project Comments" />
       )}
 
       {/* ── Finance tab ── */}
