@@ -42,11 +42,17 @@ import {
   useDeleteCertificate, useMarkPaid,
 } from "@/hooks/useProgress";
 import { extractApiError } from "@/lib/api";
+import {
+  useComplianceDocList, useCreateComplianceDoc,
+  useDeleteComplianceDoc, useVerifyComplianceDoc,
+  useExpiringDocs, useRefreshExpiryStatus,
+} from "@/hooks/useCompliance";
 
 // ── Tab definitions ───────────────────────────────────────────────
 const TABS = [
   "Overview", "Sites", "Milestones", "BOQ",
   "Subcontractors", "Progress", "Certificates",
+  "Compliance",
   "Procurement", "Inventory", "Site Ops", "Finance", "Comments",
 ] as const;
 type Tab = typeof TABS[number];
@@ -589,6 +595,9 @@ export default function ProjectDetailPage() {
 
       {/* ── Certificates tab ── */}
       {tab === "Certificates" && <CertificatesTab projectId={projectId} />}
+
+      {/* ── Compliance tab ── */}
+      {tab === "Compliance" && <ComplianceTab projectId={projectId} />}
 
       {/* ── Procurement tab ── */}
       {tab === "Procurement" && (
@@ -1845,6 +1854,282 @@ function CertificatesTab({ projectId }: { projectId: string }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Compliance sub-component ──────────────────────────────────────
+function ComplianceTab({ projectId }: { projectId: string }) {
+  const [showCreate, setShowCreate] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const { register, handleSubmit, reset } = useForm();
+
+  const { data: docsData, isLoading } = useComplianceDocList(projectId, {
+    category: categoryFilter || undefined,
+  });
+  const { data: expiringDocs } = useExpiringDocs(projectId, 30);
+  const createDoc = useCreateComplianceDoc(projectId);
+  const deleteDoc = useDeleteComplianceDoc(projectId);
+  const verifyDoc = useVerifyComplianceDoc(projectId);
+  const refreshExpiry = useRefreshExpiryStatus(projectId);
+
+  const docs = docsData?.data ?? [];
+
+  const onSubmit = async (d: any) => {
+    setError(null);
+    try {
+      await createDoc.mutateAsync({
+        subcontractor_id: d.subcontractor_id,
+        title: d.title,
+        category: d.category,
+        issuing_authority: d.issuing_authority || undefined,
+        reference_number: d.reference_number || undefined,
+        issued_date: d.issued_date || undefined,
+        expiry_date: d.expiry_date || undefined,
+        renewable: d.renewable === "true",
+        reminder_days_before: Number(d.reminder_days_before) || 30,
+        description: d.description || undefined,
+        file_name: d.file_name || undefined,
+        notes: d.notes || undefined,
+      });
+      reset();
+      setShowCreate(false);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || "Failed to create compliance document");
+    }
+  };
+
+  const { data: projectSubs } = useProjectSubcontractors(projectId);
+  const subs = projectSubs?.data ?? [];
+
+  return (
+    <div className="space-y-4">
+      {expiringDocs && expiringDocs.length > 0 && (
+        <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                {expiringDocs.length} document{expiringDocs.length > 1 ? "s" : ""} expiring within 30 days
+              </span>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => refreshExpiry.mutate()}>
+              Refresh status
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          Compliance documents
+        </h3>
+        <div className="flex gap-2">
+          <select
+            value={categoryFilter}
+            onChange={e => setCategoryFilter(e.target.value)}
+            className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs"
+          >
+            <option value="">All categories</option>
+            <option value="license">License</option>
+            <option value="tax_certificate">Tax Certificate</option>
+            <option value="insurance">Insurance</option>
+            <option value="safety_cert">Safety Cert</option>
+            <option value="quality_cert">Quality Cert</option>
+            <option value="registration">Registration</option>
+            <option value="other">Other</option>
+          </select>
+          <Button size="sm" onClick={() => setShowCreate(true)}>
+            <Plus className="h-4 w-4 mr-1" /> Add document
+          </Button>
+        </div>
+      </div>
+
+      {showCreate && (
+        <Card className="dark:bg-gray-900 dark:border-gray-800">
+          <CardContent className="pt-5">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              New compliance document
+            </h4>
+            {error && (
+              <div className="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-400 mb-4">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+            <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+                  Subcontractor *
+                </label>
+                <select
+                  {...register("subcontractor_id", { required: true })}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
+                >
+                  <option value="">Select...</option>
+                  {subs.map((s: any) => (
+                    <option key={s.subcontractor_id} value={s.subcontractor_id}>
+                      {s.subcontractor_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+                  Category *
+                </label>
+                <select
+                  {...register("category", { required: true })}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
+                >
+                  <option value="license">License</option>
+                  <option value="tax_certificate">Tax Certificate</option>
+                  <option value="insurance">Insurance</option>
+                  <option value="safety_cert">Safety Cert</option>
+                  <option value="quality_cert">Quality Cert</option>
+                  <option value="registration">Registration</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <Input label="Title *" {...register("title", { required: true })} />
+              <Input label="Issuing Authority" {...register("issuing_authority")} />
+              <Input label="Reference Number" {...register("reference_number")} />
+              <Input label="Issued Date" type="date" {...register("issued_date")} />
+              <Input label="Expiry Date" type="date" {...register("expiry_date")} />
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+                  Renewable
+                </label>
+                <select
+                  {...register("renewable")}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
+                  defaultValue="true"
+                >
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
+                </select>
+              </div>
+              <Input
+                label="Reminder (days before expiry)"
+                type="number"
+                defaultValue={30}
+                {...register("reminder_days_before")}
+              />
+              <Input label="File name" {...register("file_name")} />
+              <div className="col-span-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                  Description
+                </label>
+                <textarea
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm h-16 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  {...register("description")}
+                />
+              </div>
+              <div className="col-span-2 flex justify-end gap-2">
+                <Button variant="outline" type="button" size="sm" onClick={() => { setShowCreate(false); reset(); setError(null); }}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" loading={createDoc.isPending}>
+                  Create document
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="dark:bg-gray-900 dark:border-gray-800">
+        {isLoading ? (
+          <CardContent className="flex justify-center py-10">
+            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+          </CardContent>
+        ) : !docs.length ? (
+          <CardContent className="py-10 text-center text-gray-400">
+            No compliance documents yet
+          </CardContent>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <th className="px-4 py-3 text-left">Document</th>
+                  <th className="px-4 py-3 text-left">Category</th>
+                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">Expiry</th>
+                  <th className="px-4 py-3 text-left">Verified</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {docs.map((doc: any) => (
+                  <tr key={doc.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{doc.title}</p>
+                      <p className="text-xs text-gray-500 font-mono mt-0.5">{doc.document_number}</p>
+                    </td>
+                    <td className="px-4 py-3 capitalize text-gray-600 dark:text-gray-400">
+                      {doc.category.replace(/_/g, " ")}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge
+                        status={
+                          doc.status === "active" ? "active" :
+                          doc.status === "expiring_soon" ? "on_hold" :
+                          doc.status === "expired" ? "cancelled" :
+                          doc.status === "revoked" ? "cancelled" : "draft"
+                        }
+                        label={doc.status.replace(/_/g, " ")}
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {doc.expiry_date ? (
+                        <span className={doc.status === "expired" ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-400"}>
+                          {formatDate(doc.expiry_date)}
+                        </span>
+                      ) : "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      {doc.verified_at ? (
+                        <span className="text-xs text-green-600 dark:text-green-400">
+                          {formatDate(doc.verified_at)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">Pending</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-1">
+                        {!doc.verified_at && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => verifyDoc.mutate(doc.id)}
+                            loading={verifyDoc.isPending}
+                          >
+                            Verify
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            if (confirm("Delete this document?")) {
+                              deleteDoc.mutate(doc.id);
+                            }
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

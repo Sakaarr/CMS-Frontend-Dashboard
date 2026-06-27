@@ -13,11 +13,12 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import {
   ArrowLeft, Loader2, Building2, Star,
-  Phone, Mail, MapPin, FileText, Package, AlertCircle,
+  Phone, Mail, MapPin, FileText, Package, AlertCircle, UserPlus, X,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { extractApiError } from "@/lib/api";
+import { useAdminCreatePortalUser } from "@/hooks/usePortal";
 
 const STATUS_OPTIONS = ["active", "inactive", "blacklisted"];
 
@@ -26,6 +27,7 @@ export default function SubcontractorDetailPage() {
   const router = useRouter();
   const [tab, setTab] = useState<"overview" | "projects" | "workload">("overview");
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [showPortalForm, setShowPortalForm] = useState(false);
 
   const { data: sub, isLoading, isError } = useSubcontractor(subcontractorId);
   const { data: projectsData } = useSubcontractorProjects(subcontractorId);
@@ -106,10 +108,16 @@ export default function SubcontractorDetailPage() {
             <p className="text-sm text-gray-500">{sub.code} · {sub.specialty}</p>
           </div>
         </div>
-        <span className="flex items-center gap-1 text-lg">
-          <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
-          {sub.rating.toFixed(1)}
-        </span>
+        <div className="flex items-center gap-3">
+          <Button size="sm" onClick={() => setShowPortalForm(true)}>
+            <UserPlus className="h-4 w-4 mr-1.5" />
+            Create Portal Account
+          </Button>
+          <span className="flex items-center gap-1 text-lg">
+            <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
+            {sub.rating.toFixed(1)}
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -329,6 +337,150 @@ export default function SubcontractorDetailPage() {
           </Card>
         </div>
       )}
+
+      {showPortalForm && (
+        <PortalAccountModal
+          subcontractorId={subcontractorId}
+          subcontractorName={sub.name}
+          onClose={() => setShowPortalForm(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function PortalAccountModal({
+  subcontractorId,
+  subcontractorName,
+  onClose,
+}: {
+  subcontractorId: string;
+  subcontractorName: string;
+  onClose: () => void;
+}) {
+  const { data: sub } = useSubcontractor(subcontractorId);
+  const { mutate: createUser, isPending, error, reset } = useAdminCreatePortalUser();
+  const [form, setForm] = useState({
+    password: "",
+    role: "manager",
+  });
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSuccess(false);
+    reset();
+    createUser(
+      {
+        subcontractor_id: subcontractorId,
+        email: sub?.email || "",
+        full_name: sub?.name || "",
+        phone: sub?.phone || undefined,
+        password: form.password,
+        role: form.role,
+      },
+      {
+        onSuccess: () => {
+          setSuccess(true);
+          setTimeout(() => onClose(), 1500);
+        },
+      }
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-900">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+            Create Portal Account
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <p className="mb-4 text-sm text-gray-500">
+          Create a portal login for <strong>{subcontractorName}</strong>. The
+          user will be required to change their password on first login.
+        </p>
+
+        {success && (
+          <div className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-700 dark:bg-green-900/20 dark:text-green-400">
+            Portal user created successfully! Redirecting...
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
+            {extractApiError(error)}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            label="Full Name"
+            value={sub?.name || ""}
+            disabled
+          />
+          <Input
+            label="Email"
+            type="email"
+            value={sub?.email || ""}
+            disabled
+          />
+          <Input
+            label="Phone"
+            value={sub?.phone || ""}
+            disabled
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Set Password <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              required
+              minLength={8}
+              placeholder="Minimum 8 characters"
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
+            <select
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            >
+              <option value="manager">Manager</option>
+              <option value="site_engineer">Site Engineer</option>
+              <option value="foreman">Foreman</option>
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isPending || success}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isPending ? "Creating..." : "Create Account"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
