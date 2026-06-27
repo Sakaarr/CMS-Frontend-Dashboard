@@ -98,34 +98,6 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">
       <div className="w-full max-w-md">
-        {/* User type selector */}
-        <div className="mb-6 flex rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-1 shadow-sm">
-          <button
-            type="button"
-            onClick={() => setUserType("cms")}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-              userType === "cms"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            }`}
-          >
-            <Building2 className="h-4 w-4" />
-            CMS User
-          </button>
-          <button
-            type="button"
-            onClick={() => setUserType("subcontractor")}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-              userType === "subcontractor"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            }`}
-          >
-            <HardHat className="h-4 w-4" />
-            Subcontractor
-          </button>
-        </div>
-
         {/* Logo / branding area */}
         <div className="mb-8 flex flex-col items-center">
           {isSubcontractor ? (
@@ -174,6 +146,34 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 shadow-sm">
+          {/* User type selector */}
+          <div className="mb-6 flex rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setUserType("cms")}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                userType === "cms"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              }`}
+            >
+              <Building2 className="h-4 w-4" />
+              CMS User
+            </button>
+            <button
+              type="button"
+              onClick={() => setUserType("subcontractor")}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                userType === "subcontractor"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              }`}
+            >
+              <HardHat className="h-4 w-4" />
+              Subcontractor
+            </button>
+          </div>
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* Org slug */}
             <div>
