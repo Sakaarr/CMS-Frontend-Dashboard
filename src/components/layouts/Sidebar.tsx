@@ -16,7 +16,7 @@ import {
   LayoutDashboard, FolderKanban, FileSpreadsheet,
   ShoppingCart, Package, HardHat, FileText,
   DollarSign, LogOut, Building2, Settings,
-  ShieldCheck, Users, Inbox,
+  ShieldCheck, Users, Inbox, BarChart3,
 } from "lucide-react";
 import { useBrandingStore } from "@/hooks/useBranding";
 
@@ -46,6 +46,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
 ];
 
 const SUPERADMIN_ITEMS: NavItem[] = [
+  { label: "Platform Dashboard", href: "/admin/dashboard", icon: BarChart3 },
   { label: "Tenant Management", href: "/admin/tenants", icon: Building2 },
 ];
 
@@ -65,6 +66,8 @@ export function Sidebar() {
 
   // Filter nav items based on permissions
   const visibleItems = ALL_NAV_ITEMS.filter(item => {
+    // Superadmins see none of the regular items (no tenant context)
+    if (user?.is_superadmin) return false;
     if (item.href === "/approvals" && !hasApprovalInboxAccess) return false;
     if (item.superAdminOnly && !user?.is_superadmin) return false;
     if (item.adminOnly) {

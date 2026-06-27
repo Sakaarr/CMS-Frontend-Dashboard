@@ -50,15 +50,17 @@ export default function LoginPage() {
 
   const tenantSlug = watch("tenant_slug");
 
+  const { user: authUser } = useAuthStore();
+
   useEffect(() => {
     if (cmsHydrated && cmsAuth) {
-      router.replace("/overview");
+      router.replace(authUser?.is_superadmin ? "/admin/dashboard" : "/overview");
       return;
     }
     if (portalHydrated && portalAuth) {
       router.replace("/portal/dashboard");
     }
-  }, [cmsAuth, cmsHydrated, portalAuth, portalHydrated, router]);
+  }, [cmsAuth, cmsHydrated, portalAuth, portalHydrated, router, authUser]);
 
   useEffect(() => {
     if (!tenantSlug || tenantSlug.length < 3 || userType !== "cms") {

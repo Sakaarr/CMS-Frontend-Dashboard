@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Loader2, TrendingUp, TrendingDown, ArrowRight, Bell, Package } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Chart from "chart.js/auto";
 
 // ── Chart color helpers ───────────────────────────────────────────
@@ -76,6 +77,11 @@ function Legend({ items }: { items: { color: string; label: string }[] }) {
 export default function OverviewPage() {
   const { user } = useAuthStore();
   const { theme } = useThemeStore();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user?.is_superadmin) router.replace("/admin/dashboard");
+  }, [user, router]);
   const { data: dash, isLoading: dashLoading, isError: dashIsError, error: dashError } = useDashboardOverview();
   const { data: projects, isLoading: projectsLoading, isError: projectsIsError, error: projectsError } = useProjects({ page: 1 });
   const chartsRef = useRef<Record<string, Chart>>({});

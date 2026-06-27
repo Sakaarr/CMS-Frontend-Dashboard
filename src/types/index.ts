@@ -292,6 +292,95 @@ export interface ProjectDashboard {
   budget_vs_actual: BudgetVsActual | null;
 }
 
+// ── Superadmin Dashboard ─────────────────────────────────────────
+export interface SuperTenantStats {
+  total: number;
+  by_status: Record<string, number>;
+}
+
+export interface PlanDistribution {
+  plan: string;
+  count: number;
+}
+
+export interface MonthlySignup {
+  month: string;
+  count: number;
+}
+
+export interface TenantUserCount {
+  tenant_id: string;
+  tenant_name: string;
+  user_count: number;
+}
+
+export interface TenantProjectCount {
+  tenant_id: string;
+  tenant_name: string;
+  project_count: number;
+}
+
+export interface SuperRecentTenant {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  plan: string;
+  created_at: string | null;
+}
+
+export interface TopTenantRevenue {
+  tenant_id: string;
+  tenant_name: string;
+  revenue: number;
+}
+
+export interface SuperAdminOverview {
+  tenant_stats: SuperTenantStats;
+  plan_distribution: PlanDistribution[];
+  monthly_signups: MonthlySignup[];
+  tenant_user_counts: TenantUserCount[];
+  tenant_project_counts: TenantProjectCount[];
+  total_users: number;
+  total_projects: number;
+  total_revenue: number;
+  recent_tenants: SuperRecentTenant[];
+  top_tenants_by_revenue: TopTenantRevenue[];
+}
+
+export interface SuperTenantDetail {
+  tenant: {
+    id: string;
+    name: string;
+    slug: string;
+    status: string;
+    plan: string;
+    email: string;
+    phone: string | null;
+    address: string | null;
+    country: string;
+    currency: string;
+    pan_number: string | null;
+    vat_number: string | null;
+    logo_url: string | null;
+    is_active: boolean;
+    max_projects: number;
+    max_users: number;
+    created_at: string | null;
+  };
+  user_count: number;
+  project_count: number;
+  total_invoiced: number;
+  total_paid: number;
+  projects_by_status: Record<string, number>;
+  users: Array<{
+    full_name: string;
+    email: string;
+    is_active: boolean;
+    role: string;
+  }>;
+}
+
 // ── Shared ────────────────────────────────────────────────────────
 export interface APIResponse<T> {
   success: boolean;

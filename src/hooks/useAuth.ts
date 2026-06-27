@@ -33,8 +33,9 @@ export function useLogin() {
       localStorage.setItem("tenant_slug", tenant_slug);
       clearPermissions();
       const meRes = await apiClient.get<{ data: User }>("/auth/me");
-      setAuth(meRes.data.data, tenant_slug);
-      router.push("/overview");
+      const user = meRes.data.data;
+      setAuth(user, tenant_slug);
+      router.push(user.is_superadmin ? "/admin/dashboard" : "/overview");
     },
     onError: () => {
       // Clean up on failed login
