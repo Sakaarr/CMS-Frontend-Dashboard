@@ -474,3 +474,126 @@ export interface PaginatedResponse<T> {
   page_size: number;
   total_pages: number;
 }
+
+// ── Subcontractor Progress Tracking ────────────────────────────
+export type ProgressStatus = "draft" | "submitted" | "approved" | "rejected";
+
+export interface ProgressEntry {
+  id: string;
+  project_id: string;
+  contract_id: string;
+  boq_item_id: string;
+  assignment_id: string | null;
+  report_date: string;
+  work_date: string;
+  quantity_completed: number;
+  cumulative_quantity: number;
+  remarks: string | null;
+  attachments: string | null;
+  status: ProgressStatus;
+  submitted_at: string | null;
+  submitted_by: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  rejection_reason: string | null;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// ── Subcontractor Payment Certificates (IPC) ────────────────────
+export type CertificateStatus = "draft" | "submitted" | "approved" | "paid" | "cancelled";
+
+export interface SubcontractorCertificateItem {
+  id: string;
+  boq_item_id: string;
+  description: string;
+  unit: string;
+  assigned_quantity: number;
+  unit_rate: number;
+  previous_certified_qty: number;
+  previous_certified_amount: number;
+  current_qty: number;
+  current_amount: number;
+  total_certified_qty: number;
+  total_certified_amount: number;
+  remaining_qty: number;
+  remarks: string | null;
+}
+
+export interface SubcontractorCertificate {
+  id: string;
+  project_id: string;
+  contract_id: string;
+  certificate_number: string;
+  period_start: string;
+  period_end: string;
+  is_final: boolean;
+  status: CertificateStatus;
+  previous_certified_value: number;
+  current_completed_value: number;
+  total_certified_value: number;
+  retention_percentage: number;
+  retention_amount: number;
+  deductions: number;
+  gross_payable: number;
+  net_payable: number;
+  previous_paid_amount: number;
+  amount_due: number;
+  approved_by: string | null;
+  approved_at: string | null;
+  revision_number: number;
+  parent_id: string | null;
+  remarks: string | null;
+  version: number;
+  created_at: string;
+  updated_at: string;
+  items: SubcontractorCertificateItem[];
+}
+
+export interface BOQProgressSummary {
+  assignment_id: string;
+  boq_item_id: string;
+  item_number: string;
+  description: string;
+  unit: string;
+  boq_quantity: number;
+  boq_unit_rate: number;
+  assigned_quantity: number;
+  unit_rate: number;
+  total_completed: number;
+  completion_pct: number;
+  previous_certified_qty: number;
+  previous_certified_amount: number;
+  current_certifiable_qty: number;
+  current_certifiable_amount: number;
+  remaining_qty: number;
+}
+
+export interface ContractProgressSummary {
+  contract_id: string;
+  contract_number: string;
+  project_id: string;
+  subcontractor_name: string;
+  subcontractor_specialty: string | null;
+  total_assigned_quantity: number;
+  total_completed_quantity: number;
+  completion_percentage: number;
+  total_contract_value: number;
+  certified_value: number;
+  pending_certification: number;
+  last_progress_date: string | null;
+}
+
+export interface ProgressDashboard {
+  total_contracts: number;
+  active_contracts: number;
+  total_progress_entries: number;
+  pending_approval_entries: number;
+  total_certificates: number;
+  approved_certificates: number;
+  total_pending_payment: number;
+  total_certified_value: number;
+  total_retention_held: number;
+  contracts: ContractProgressSummary[];
+}
