@@ -32,12 +32,21 @@ import Link from "next/link";
 import Chart from "chart.js/auto";
 import { Input } from "@/components/ui/input";
 import { CommentSection } from "@/components/comments/CommentSection";
+import {
+  useProgressList, useProgressDashboard, useCreateProgress,
+  useSubmitProgress, useApproveProgress, useDeleteProgress,
+} from "@/hooks/useProgress";
+import {
+  useCertificate, useCertificateList, useCreateCertificate,
+  useSubmitCertificate, useApproveCertificate,
+  useDeleteCertificate, useMarkPaid,
+} from "@/hooks/useProgress";
 import { extractApiError } from "@/lib/api";
 
 // ── Tab definitions ───────────────────────────────────────────────
 const TABS = [
   "Overview", "Sites", "Milestones", "BOQ",
-  "Subcontractors",
+  "Subcontractors", "Progress", "Certificates",
   "Procurement", "Inventory", "Site Ops", "Finance", "Comments",
 ] as const;
 type Tab = typeof TABS[number];
@@ -575,6 +584,12 @@ export default function ProjectDetailPage() {
       {/* ── Subcontractors tab ── */}
       {tab === "Subcontractors" && <SubcontractorsTab projectId={projectId} />}
 
+      {/* ── Progress tab ── */}
+      {tab === "Progress" && <ProgressTab projectId={projectId} />}
+
+      {/* ── Certificates tab ── */}
+      {tab === "Certificates" && <CertificatesTab projectId={projectId} />}
+
       {/* ── Procurement tab ── */}
       {tab === "Procurement" && (
         <Card className="dark:bg-gray-900 dark:border-gray-800">
@@ -739,6 +754,7 @@ export default function ProjectDetailPage() {
       )}
     </div>
   );
+}
   // ── Sites sub-component ────────────────────────────────────────────
 function SitesTab({ projectId }: { projectId: string }) {
   const { data: sites, isLoading } = useSites(projectId);
@@ -1408,4 +1424,427 @@ function SubcontractorBOQItems({ contractId }: { contractId: string }) {
     </table>
   );
 }
+
+
+// ── Progress Tab ─────────────────────────────────────────────────
+
+function ProgressTab({ projectId }: { projectId: string }) {
+  const [showCreate, setShowCreate] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedContractId, setSelectedContractId] = useState<string>("");
+
+  const { data: subsData } = useProjectSubcontractors(projectId);
+  const { data: progressData, isLoading } = useProgressList(projectId);
+  const { data: dashboard } = useProgressDashboard(projectId);
+  const { data: boqItems } = useContractBOQItems(selectedContractId);
+
+  const createProgress = useCreateProgress(projectId);
+  const submitProgress = useSubmitProgress(projectId);
+  const approveProgress = useApproveProgress(projectId);
+  const deleteProgress = useDeleteProgress(projectId);
+
+  const progressEntries = progressData?.data ?? [];
+  const contracts = subsData?.data ?? [];
+  const assignedBOQItems = boqItems?.data ?? [];
+
+  const onCreate = async (formData: any) => {
+    try {
+      setError(null);
+      await createProgress.mutateAsync({
+        contract_id: formData.contract_id,
+        boq_item_id: formData.boq_item_id,
+        work_date: formData.work_date,
+        quantity_completed: Number(formData.quantity_completed),
+        remarks: formData.remarks || undefined,
+      });
+      setShowCreate(false);
+      setSelectedContractId("");
+    } catch (err) {
+      setError(extractApiError(err));
+    }
+  };
+
+  const progressForm = useForm();
+
+  return (
+    <div className="space-y-4">
+      {dashboard && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Total Entries</CardTitle></CardHeader>
+            <CardContent><p className="text-2xl font-bold">{dashboard.total_progress_entries}</p></CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Pending Approval</CardTitle></CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-amber-600">{dashboard.pending_approval_entries}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Completion Rate</CardTitle></CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{dashboard.contracts.length > 0 ? Math.round(dashboard.contracts.reduce((s: number, c: any) => s + c.completion_percentage, 0) / dashboard.contracts.length) : 0}%</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Pending Payment</CardTitle></CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{formatCurrency(dashboard.total_pending_payment)}</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          Progress Entries
+        </h3>
+        <Button size="sm" onClick={() => { setShowCreate(!showCreate); progressForm.reset(); setSelectedContractId(""); }}>
+          <Plus className="h-4 w-4 mr-1" />
+          Record progress
+        </Button>
+      </div>
+
+      {showCreate && (
+        <Card>
+          <CardHeader><CardTitle>New Progress Entry</CardTitle></CardHeader>
+          <CardContent>
+            {error && (
+              <div className="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-400 mb-4">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+            <form onSubmit={progressForm.handleSubmit(onCreate)} className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Contract *</label>
+                <select
+                  {...progressForm.register("contract_id", { required: true })}
+                  onChange={(e) => {
+                    progressForm.setValue("contract_id", e.target.value);
+                    progressForm.setValue("boq_item_id", "");
+                    setSelectedContractId(e.target.value);
+                  }}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
+                >
+                  <option value="">Select...</option>
+                  {contracts.map((c: any) => (
+                    <option key={c.contract_id} value={c.contract_id}>
+                      {c.subcontractor_name} - {c.contract_number}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">BOQ Item *</label>
+                <select
+                  {...progressForm.register("boq_item_id", { required: true })}
+                  disabled={!selectedContractId}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm disabled:opacity-50"
+                >
+                  <option value="">{selectedContractId ? "Select BOQ item..." : "Select a contract first"}</option>
+                  {assignedBOQItems.map((item: any) => (
+                    <option key={item.boq_item_id} value={item.boq_item_id}>
+                      {item.item_number} — {item.description} ({item.assigned_quantity} {item.unit})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Work Date *</label>
+                <input type="date" {...progressForm.register("work_date", { required: true })}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Qty Completed *</label>
+                <input type="number" step="0.01" {...progressForm.register("quantity_completed", { required: true })}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Remarks</label>
+                <input {...progressForm.register("remarks")}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
+              </div>
+              <div className="col-span-2 flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
+                <Button type="submit" loading={createProgress.isPending}>Create</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {isLoading ? (
+        <Card><CardContent className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></CardContent></Card>
+      ) : progressEntries.length === 0 ? (
+        <Card><CardContent className="py-10 text-center text-gray-400">No progress entries yet</CardContent></Card>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-xs font-medium uppercase tracking-wide text-gray-500">
+                <th className="px-4 py-3 text-left">Date</th>
+                <th className="px-4 py-3 text-left">Work Date</th>
+                <th className="px-4 py-3 text-right">Qty</th>
+                <th className="px-4 py-3 text-right">Cumulative</th>
+                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-left">Remarks</th>
+                <th className="px-4 py-3 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {progressEntries.map((e: any) => (
+                <tr key={e.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                  <td className="px-4 py-3 text-xs text-gray-500">{formatDate(e.report_date)}</td>
+                  <td className="px-4 py-3 text-xs text-gray-500">{formatDate(e.work_date)}</td>
+                  <td className="px-4 py-3 text-right font-medium">{e.quantity_completed}</td>
+                  <td className="px-4 py-3 text-right">{e.cumulative_quantity}</td>
+                  <td className="px-4 py-3"><Badge status={e.status} /></td>
+                  <td className="px-4 py-3 text-xs text-gray-500 max-w-[200px] truncate">{e.remarks || "-"}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1">
+                      {e.status === "draft" && (
+                        <>
+                          <Button size="sm" variant="outline" onClick={() => submitProgress.mutate(e.id)}>Submit</Button>
+                          <Button size="sm" variant="danger" onClick={() => deleteProgress.mutate(e.id)}>Delete</Button>
+                        </>
+                      )}
+                      {e.status === "submitted" && (
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="success" onClick={() => approveProgress.mutate({ entryId: e.id })}>Approve</Button>
+                          <Button size="sm" variant="outline" className="text-red-500" onClick={() => {
+                            const reason = prompt("Rejection reason:");
+                            if (reason) approveProgress.mutate({ entryId: e.id, rejection_reason: reason });
+                          }}>Reject</Button>
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ── Certificates Tab ─────────────────────────────────────────────
+
+function CertificatesTab({ projectId }: { projectId: string }) {
+  const [showCreate, setShowCreate] = useState(false);
+  const [selectedCertId, setSelectedCertId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [filterContract, setFilterContract] = useState<string>("");
+
+  const { data: subsData } = useProjectSubcontractors(projectId);
+  const { data: certData, isLoading } = useCertificateList(projectId, { contract_id: filterContract || undefined });
+  const { data: singleCert } = useCertificate(selectedCertId ?? "");
+  const createCert = useCreateCertificate(projectId);
+  const submitCert = useSubmitCertificate(projectId);
+  const approveCert = useApproveCertificate(projectId);
+  const markPaid = useMarkPaid(projectId);
+  const deleteCert = useDeleteCertificate(projectId);
+
+  const certs = certData?.data ?? [];
+  const contracts = subsData?.data ?? [];
+
+  const certForm = useForm();
+
+  const onCreate = async (formData: any) => {
+    try {
+      setError(null);
+      await createCert.mutateAsync({
+        contract_id: formData.contract_id,
+        period_start: formData.period_start,
+        period_end: formData.period_end,
+        deductions: Number(formData.deductions) || 0,
+        is_final: formData.is_final === "true",
+        remarks: formData.remarks || undefined,
+      });
+      setShowCreate(false);
+      certForm.reset();
+    } catch (err) {
+      setError(extractApiError(err));
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          Payment Certificates (IPC)
+        </h3>
+        <div className="flex gap-2">
+          <select
+            value={filterContract}
+            onChange={(e) => setFilterContract(e.target.value)}
+            className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
+          >
+            <option value="">All contracts</option>
+            {contracts.map((c: any) => (
+              <option key={c.contract_id} value={c.contract_id}>{c.subcontractor_name}</option>
+            ))}
+          </select>
+          <Button size="sm" onClick={() => { setShowCreate(!showCreate); certForm.reset(); }}>
+            <Plus className="h-4 w-4 mr-1" />
+            Generate certificate
+          </Button>
+        </div>
+      </div>
+
+      {showCreate && (
+        <Card>
+          <CardHeader><CardTitle>Generate Payment Certificate</CardTitle></CardHeader>
+          <CardContent>
+            {error && (
+              <div className="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-400 mb-4">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+            <form onSubmit={certForm.handleSubmit(onCreate)} className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Contract *</label>
+                <select {...certForm.register("contract_id", { required: true })}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm">
+                  <option value="">Select...</option>
+                  {contracts.map((c: any) => (
+                    <option key={c.contract_id} value={c.contract_id}>{c.subcontractor_name} - {c.contract_number}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Period Start *</label>
+                <input type="date" {...certForm.register("period_start", { required: true })}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Period End *</label>
+                <input type="date" {...certForm.register("period_end", { required: true })}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Deductions</label>
+                <input type="number" step="0.01" {...certForm.register("deductions")}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Final Certificate?</label>
+                <select {...certForm.register("is_final")}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm">
+                  <option value="false">No</option>
+                  <option value="true">Yes</option>
+                </select>
+              </div>
+              <div className="col-span-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Remarks</label>
+                <input {...certForm.register("remarks")}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" />
+              </div>
+              <div className="col-span-2 flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
+                <Button type="submit" loading={createCert.isPending}>Generate</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {isLoading ? (
+        <Card><CardContent className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></CardContent></Card>
+      ) : certs.length === 0 ? (
+        <Card><CardContent className="py-10 text-center text-gray-400">No certificates yet</CardContent></Card>
+      ) : (
+        <div className="space-y-4">
+          {certs.map((cert: any) => (
+            <Card key={cert.id}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>{cert.certificate_number}</CardTitle>
+                    <p className="text-xs text-gray-400">
+                      {formatDate(cert.period_start)} — {formatDate(cert.period_end)}
+                      {cert.is_final ? " (Final)" : ""}
+                      {cert.revision_number > 1 ? ` · Rev ${cert.revision_number}` : ""}
+                    </p>
+                  </div>
+                  <Badge status={cert.status} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm mb-3">
+                  <div>
+                    <p className="text-xs text-gray-500">Current Work Value</p>
+                    <p className="font-medium">{formatCurrency(cert.current_completed_value)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Retention ({cert.retention_percentage}%)</p>
+                    <p className="font-medium text-amber-600">{formatCurrency(cert.retention_amount)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Net Payable</p>
+                    <p className="font-medium text-green-600">{formatCurrency(cert.net_payable)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Amount Due</p>
+                    <p className="font-medium">{formatCurrency(cert.amount_due)}</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 flex-wrap">
+                  <Button size="sm" variant="outline" onClick={() => setSelectedCertId(selectedCertId === cert.id ? null : cert.id)}>
+                    {selectedCertId === cert.id ? "Hide items" : "View items"}
+                  </Button>
+                  {cert.status === "draft" && (
+                    <>
+                      <Button size="sm" onClick={() => submitCert.mutate(cert.id)}>Submit</Button>
+                      <Button size="sm" variant="danger" onClick={() => deleteCert.mutate(cert.id)}>Delete</Button>
+                    </>
+                  )}
+                  {cert.status === "submitted" && (
+                    <Button size="sm" variant="success" onClick={() => approveCert.mutate(cert.id)}>Approve</Button>
+                  )}
+                  {cert.status === "approved" && (
+                    <Button size="sm" onClick={() => markPaid.mutate(cert.id)}>Mark Paid</Button>
+                  )}
+                </div>
+
+                {selectedCertId === cert.id && singleCert?.id === cert.id && (
+                  <div className="mt-4 border-t pt-4">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-xs text-gray-500">
+                          <th className="text-left py-1 pr-2">Description</th>
+                          <th className="text-right py-1 pr-2">Prev Certified</th>
+                          <th className="text-right py-1 pr-2">Current</th>
+                          <th className="text-right py-1 pr-2">Total Certified</th>
+                          <th className="text-right py-1 pr-2">Amount</th>
+                          <th className="text-right py-1 pr-2">Remaining</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {singleCert?.items?.map((item: any) => (
+                          <tr key={item.id} className="border-t border-gray-100 dark:border-gray-800">
+                            <td className="py-1.5 pr-2 text-gray-600 dark:text-gray-300">{item.description}</td>
+                            <td className="py-1.5 pr-2 text-right">{item.previous_certified_qty} ({formatCurrency(item.previous_certified_amount)})</td>
+                            <td className="py-1.5 pr-2 text-right">{item.current_qty}</td>
+                            <td className="py-1.5 pr-2 text-right">{item.total_certified_qty}</td>
+                            <td className="py-1.5 pr-2 text-right font-medium">{formatCurrency(item.total_certified_amount)}</td>
+                            <td className="py-1.5 pr-2 text-right">{item.remaining_qty}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
