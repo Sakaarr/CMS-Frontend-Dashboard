@@ -371,6 +371,81 @@ export interface WorkOrder {
 }
 
 // ── Comments ──────────────────────────────────────────────────────
+// ── Subcontractor BOQ Assignments ─────────────────────────────────
+export type BOQItemAssignmentStatus = "pending" | "in_progress" | "completed" | "cancelled";
+
+export interface SubcontractorBOQItem {
+  id: string;
+  contract_id: string;
+  boq_item_id: string;
+  assigned_quantity: number;
+  unit_rate: number;
+  contract_amount: number;
+  status: BOQItemAssignmentStatus;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface SubcontractorBOQItemDetail {
+  id: string;
+  boq_item_id: string;
+  item_number: string;
+  description: string;
+  unit: string;
+  boq_quantity: number;
+  boq_unit_rate: number;
+  assigned_quantity: number;
+  unit_rate: number;
+  contract_amount: number;
+  status: BOQItemAssignmentStatus;
+}
+
+export interface ProjectSubcontractorResponse {
+  contract_id: string;
+  contract_number: string;
+  contract_title: string;
+  contract_status: ContractStatus;
+  contract_value: number;
+  currency: string;
+  scope_of_work: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  retention_percentage: number;
+  subcontractor_id: string;
+  subcontractor_name: string;
+  subcontractor_specialty: string;
+  boq_items_count: number;
+  boq_items_total_amount: number;
+}
+
+export interface SubcontractorContractDetail {
+  id: string;
+  project_id: string;
+  contract_number: string;
+  title: string;
+  status: ContractStatus;
+  contract_value: number;
+  currency: string;
+  scope_of_work: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  retention_percentage: number;
+  created_at: string;
+}
+
+export interface SubcontractorWorkload {
+  subcontractor_id: string;
+  subcontractor_name: string;
+  total_contracts: number;
+  total_contract_value: number;
+  active_contracts: number;
+  active_contract_value: number;
+  total_boq_items_assigned: number;
+  total_assigned_amount: number;
+  contracts: SubcontractorContractDetail[];
+}
+
+// ── Comments ──────────────────────────────────────────────────────
 export interface Comment {
   id: string;
   content: string;

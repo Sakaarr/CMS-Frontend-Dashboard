@@ -108,3 +108,108 @@ export function useCreateWorkOrder() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["work-orders"] }),
   });
 }
+
+// ── BOQ Item Assignment ──────────────────────────────────────────
+
+export function useAssignBOQItems() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ contractId, data }: { contractId: string; data: any }) =>
+      apiClient.post(`/contracts/${contractId}/boq-items`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contract-boq-items"] });
+      qc.invalidateQueries({ queryKey: ["subcontractor-workload"] });
+    },
+  });
+}
+
+export function useContractBOQItems(contractId: string, params?: { page?: number }) {
+  return useQuery({
+    queryKey: ["contract-boq-items", contractId, params],
+    queryFn: async () => {
+      const p = new URLSearchParams();
+      if (params?.page) p.set("page", String(params.page));
+      const res = await apiClient.get(`/contracts/${contractId}/boq-items?${p}`);
+      return res.data;
+    },
+    enabled: !!contractId,
+  });
+}
+
+// ── Project & Subcontractor Queries ──────────────────────────────
+
+export function useSubcontractorProjects(subcontractorId: string, params?: { page?: number }) {
+  return useQuery({
+    queryKey: ["subcontractor-projects", subcontractorId, params],
+    queryFn: async () => {
+      const p = new URLSearchParams();
+      if (params?.page) p.set("page", String(params.page));
+      const res = await apiClient.get(`/subcontractors/${subcontractorId}/projects?${p}`);
+      return res.data;
+    },
+    enabled: !!subcontractorId,
+  });
+}
+
+export function useProjectSubcontractors(projectId: string, params?: { page?: number }) {
+  return useQuery({
+    queryKey: ["project-subcontractors", projectId, params],
+    queryFn: async () => {
+      const p = new URLSearchParams();
+      if (params?.page) p.set("page", String(params.page));
+      const res = await apiClient.get(`/projects/${projectId}/subcontractors?${p}`);
+      return res.data;
+    },
+    enabled: !!projectId,
+  });
+}
+
+// ── Dashboard / Workload ────────────────────────────────────────
+
+export function useSubcontractorWorkload(subcontractorId: string) {
+  return useQuery({
+    queryKey: ["subcontractor-workload", subcontractorId],
+    queryFn: async () => {
+      const res = await apiClient.get(`/subcontractors/${subcontractorId}/workload`);
+      return res.data.data;
+    },
+    enabled: !!subcontractorId,
+  });
+}
+
+export function useDeleteContract() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (contractId: string) => apiClient.delete(`/contracts/${contractId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contracts"] });
+      qc.invalidateQueries({ queryKey: ["project-subcontractors"] });
+      qc.invalidateQueries({ queryKey: ["subcontractor-projects"] });
+    },
+  });
+}
+
+export function useUpdateContract() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ contractId, data }: { contractId: string; data: any }) =>
+      apiClient.patch(`/contracts/${contractId}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contracts"] });
+      qc.invalidateQueries({ queryKey: ["project-subcontractors"] });
+      qc.invalidateQueries({ queryKey: ["subcontractor-projects"] });
+    },
+  });
+}
+
+export function useUpdateBOQItemAssignment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ assignmentId, data }: { assignmentId: string; data: any }) =>
+      apiClient.patch(`/boq-item-assignments/${assignmentId}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contract-boq-items"] });
+      qc.invalidateQueries({ queryKey: ["subcontractor-workload"] });
+    },
+  });
+}

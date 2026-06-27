@@ -9,11 +9,16 @@ import {
 } from "@/hooks/useProjects";
 import { useForm } from "react-hook-form";
 import { Plus } from "lucide-react";
-import { useBudgetVersions, useBOQSummary } from "@/hooks/useBoq";
+import { useBudgetVersions, useBOQSummary, useBOQItems } from "@/hooks/useBoq";
 import { usePurchaseOrders, useProcurementStats } from "@/hooks/useProcurement";
 import { useDPRs, useSiteOpsSummary } from "@/hooks/useSiteOps";
 import { useFinanceSummary, useInvoices } from "@/hooks/useFinance";
 import { useMaterialRequests } from "@/hooks/useInventory";
+import {
+  useProjectSubcontractors, useSubcontractors,
+  useCreateContract, useAssignBOQItems, useContractBOQItems,
+  useDeleteContract,
+} from "@/hooks/useSubcontractors";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,16 +26,18 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { useThemeStore } from "@/store/theme.store";
 import {
   ArrowLeft, MapPin, Calendar, User,
-  TrendingUp, CheckCircle, Loader2,
+  TrendingUp, CheckCircle, Loader2, Users, AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 import Chart from "chart.js/auto";
 import { Input } from "@/components/ui/input";
 import { CommentSection } from "@/components/comments/CommentSection";
+import { extractApiError } from "@/lib/api";
 
 // ── Tab definitions ───────────────────────────────────────────────
 const TABS = [
   "Overview", "Sites", "Milestones", "BOQ",
+  "Subcontractors",
   "Procurement", "Inventory", "Site Ops", "Finance", "Comments",
 ] as const;
 type Tab = typeof TABS[number];
@@ -565,6 +572,9 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
+      {/* ── Subcontractors tab ── */}
+      {tab === "Subcontractors" && <SubcontractorsTab projectId={projectId} />}
+
       {/* ── Procurement tab ── */}
       {tab === "Procurement" && (
         <Card className="dark:bg-gray-900 dark:border-gray-800">
@@ -1097,6 +1107,305 @@ function MilestonesTab({ projectId }: { projectId: string }) {
         )}
       </Card>
     </div>
+  );
+}
+
+function SubcontractorsTab({ projectId }: { projectId: string }) {
+  const [showCreateContract, setShowCreateContract] = useState(false);
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
+  const [assignBoqContractId, setAssignBoqContractId] = useState<string | null>(null);
+  const [boqItemIds, setBoqItemIds] = useState<string[]>([]);
+  const [contractError, setContractError] = useState<string | null>(null);
+  const [assignError, setAssignError] = useState<string | null>(null);
+  const [deleteContractId, setDeleteContractId] = useState<string | null>(null);
+
+  const { data: subsData } = useSubcontractors();
+  const { data: projectSubs, refetch: refetchSubs } = useProjectSubcontractors(projectId);
+  const { data: boqItems } = useContractBOQItems(assignBoqContractId ?? "");
+  const createContract = useCreateContract();
+  const assignBOQ = useAssignBOQItems();
+  const deleteContract = useDeleteContract();
+  const { data: versions } = useBudgetVersions(projectId);
+  const approvedVersion = versions?.find(v => v.status === "approved") ?? versions?.[0];
+  const { data: boqItemsAll } = useBOQItems(approvedVersion?.id ?? "");
+
+  const contractForm = useForm();
+
+  const subs = subsData?.data ?? [];
+  const projectContracts = projectSubs?.data ?? [];
+
+  const onCreateContract = async (formData: any) => {
+    try {
+      setContractError(null);
+      await createContract.mutateAsync({
+        projectId,
+        data: {
+          subcontractor_id: formData.subcontractor_id,
+          contract_number: formData.contract_number || undefined,
+          title: formData.title,
+          scope_of_work: formData.scope_of_work,
+          contract_value: Number(formData.contract_value) || 0,
+          start_date: formData.start_date || undefined,
+          end_date: formData.end_date || undefined,
+          retention_percentage: Number(formData.retention_percentage) || 0,
+        },
+      });
+      contractForm.reset();
+      setShowCreateContract(false);
+      refetchSubs();
+    } catch (err) {
+      setContractError(extractApiError(err));
+    }
+  };
+
+  const handleAssignBOQ = async () => {
+    if (!assignBoqContractId || boqItemIds.length === 0) return;
+    try {
+      setAssignError(null);
+      const items = boqItemIds.map(id => {
+        const item = (boqItemsAll ?? []).find((b: any) => b.id === id);
+        return {
+          boq_item_id: id,
+          assigned_quantity: item?.quantity ?? 0,
+          unit_rate: item?.unit_rate ?? 0,
+          contract_amount: (item?.quantity ?? 0) * (item?.unit_rate ?? 0),
+        };
+      });
+      await assignBOQ.mutateAsync({ contractId: assignBoqContractId, data: { items } });
+      setAssignBoqContractId(null);
+      setBoqItemIds([]);
+    } catch (err) {
+      setAssignError(extractApiError(err));
+    }
+  };
+
+  const handleDeleteContract = async (contractId: string) => {
+    try {
+      setContractError(null);
+      await deleteContract.mutateAsync(contractId);
+      setDeleteContractId(null);
+      refetchSubs();
+    } catch (err) {
+      setContractError(extractApiError(err));
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          Subcontractors on this project
+        </h3>
+        <Button size="sm" onClick={() => setShowCreateContract(!showCreateContract)}>
+          <Plus className="h-4 w-4 mr-1" />
+          Assign subcontractor
+        </Button>
+      </div>
+
+      {showCreateContract && (
+        <Card>
+          <CardHeader><CardTitle>New Contract</CardTitle></CardHeader>
+          <CardContent>
+            {contractError && (
+              <div className="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-400 mb-4">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                {contractError}
+              </div>
+            )}
+            <form onSubmit={contractForm.handleSubmit(onCreateContract)} className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+                  Subcontractor *
+                </label>
+                <select
+                  {...contractForm.register("subcontractor_id", { required: true })}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
+                >
+                  <option value="">Select...</option>
+                  {subs.map((s: any) => (
+                    <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
+                  ))}
+                </select>
+              </div>
+              <Input label="Contract Number (optional)" {...contractForm.register("contract_number")} />
+              <Input label="Title *" {...contractForm.register("title", { required: true })} />
+              <Input label="Contract Value" type="number" {...contractForm.register("contract_value")} />
+              <Input label="Retention %" type="number" step="0.1" {...contractForm.register("retention_percentage")} />
+              <Input label="Start Date" type="date" {...contractForm.register("start_date")} />
+              <Input label="End Date" type="date" {...contractForm.register("end_date")} />
+              <div className="col-span-2">
+                <Input label="Scope of Work" {...contractForm.register("scope_of_work")} />
+              </div>
+              <div className="col-span-2 flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setShowCreateContract(false)}>Cancel</Button>
+                <Button type="submit" loading={createContract.isPending}>Create</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {projectContracts.length === 0 && !showCreateContract && (
+        <Card>
+          <CardContent className="py-10 text-center text-gray-400">
+            <Users className="h-10 w-10 mx-auto mb-2 text-gray-300" />
+            No subcontractors assigned yet
+          </CardContent>
+        </Card>
+      )}
+
+      {projectContracts.map((pc: any) => (
+        <Card key={pc.contract_id}>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>{pc.subcontractor_name}</CardTitle>
+                <p className="text-xs text-gray-400">{pc.contract_number} · {pc.contract_title}</p>
+              </div>
+              <Badge status={pc.contract_status} />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm mb-4">
+              <div>
+                <p className="text-xs text-gray-500">Value</p>
+                <p className="font-medium">{formatCurrency(pc.contract_value, pc.currency)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Retention</p>
+                <p className="font-medium">{pc.retention_percentage}%</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">BOQ items</p>
+                <p className="font-medium">{pc.boq_items_count}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">BOQ amount</p>
+                <p className="font-medium">{formatCurrency(pc.boq_items_total_amount)}</p>
+              </div>
+            </div>
+            {pc.scope_of_work && (
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{pc.scope_of_work}</p>
+            )}
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectedContractId(selectedContractId === pc.contract_id ? null : pc.contract_id)}
+              >
+                View BOQ items
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setAssignBoqContractId(assignBoqContractId === pc.contract_id ? null : pc.contract_id)}
+              >
+                Assign BOQ items
+              </Button>
+              {deleteContractId === pc.contract_id ? (
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="danger" onClick={() => handleDeleteContract(pc.contract_id)}>
+                    Confirm delete
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setDeleteContractId(null)}>
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-red-500 border-red-200 hover:bg-red-50"
+                  onClick={() => setDeleteContractId(pc.contract_id)}
+                >
+                  Delete
+                </Button>
+              )}
+            </div>
+
+            {selectedContractId === pc.contract_id && (
+              <div className="mt-4">
+                <SubcontractorBOQItems contractId={pc.contract_id} />
+              </div>
+            )}
+
+            {assignBoqContractId === pc.contract_id && boqItemsAll && (
+              <div className="mt-4 border-t pt-4">
+                {assignError && (
+                  <div className="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-400 mb-4">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    {assignError}
+                  </div>
+                )}
+                <p className="text-sm font-medium mb-2">Select BOQ items to assign</p>
+                <div className="max-h-48 overflow-y-auto space-y-1 mb-3">
+                  {boqItemsAll.filter((b: any) => !b.is_section_header).map((item: any) => (
+                    <label key={item.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        value={item.id}
+                        checked={boqItemIds.includes(item.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setBoqItemIds([...boqItemIds, item.id]);
+                          } else {
+                            setBoqItemIds(boqItemIds.filter(id => id !== item.id));
+                          }
+                        }}
+                      />
+                      <span>{item.item_number} — {item.description}</span>
+                      <span className="text-gray-400 ml-auto">{item.quantity} {item.unit}</span>
+                    </label>
+                  ))}
+                </div>
+                <Button size="sm" onClick={handleAssignBOQ} loading={assignBOQ.isPending}>
+                  Assign selected ({boqItemIds.length})
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function SubcontractorBOQItems({ contractId }: { contractId: string }) {
+  const { data, isLoading } = useContractBOQItems(contractId);
+
+  if (isLoading) return <Loader2 className="h-4 w-4 animate-spin text-gray-400" />;
+
+  const items = data?.data ?? [];
+
+  if (items.length === 0) {
+    return <p className="text-sm text-gray-400">No BOQ items assigned</p>;
+  }
+
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="border-b text-xs text-gray-500">
+          <th className="text-left py-1 pr-2">Item</th>
+          <th className="text-left py-1 pr-2">Description</th>
+          <th className="text-right py-1 pr-2">Qty</th>
+          <th className="text-right py-1 pr-2">Rate</th>
+          <th className="text-right py-1 pr-2">Amount</th>
+          <th className="text-left py-1">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((item: any) => (
+          <tr key={item.id} className="border-t border-gray-100 dark:border-gray-800">
+            <td className="py-1.5 pr-2 font-mono text-xs">{item.item_number}</td>
+            <td className="py-1.5 pr-2 text-gray-600 dark:text-gray-300">{item.description}</td>
+            <td className="py-1.5 pr-2 text-right">{item.assigned_quantity}</td>
+            <td className="py-1.5 pr-2 text-right">{formatCurrency(item.unit_rate)}</td>
+            <td className="py-1.5 pr-2 text-right font-medium">{formatCurrency(item.contract_amount)}</td>
+            <td className="py-1.5"><Badge status={item.status} /></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 }
