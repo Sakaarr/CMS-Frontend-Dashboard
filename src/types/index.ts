@@ -542,6 +542,7 @@ export interface SubcontractorCertificate {
   amount_due: number;
   approved_by: string | null;
   approved_at: string | null;
+  invoice_id: string | null;
   revision_number: number;
   parent_id: string | null;
   remarks: string | null;
@@ -596,4 +597,134 @@ export interface ProgressDashboard {
   total_certified_value: number;
   total_retention_held: number;
   contracts: ContractProgressSummary[];
+}
+
+// ── Quality / Safety ─────────────────────────────────────────────
+export type InspectionStatus = "scheduled" | "in_progress" | "passed" | "failed" | "cancelled";
+export type NCRStatus = "open" | "acknowledged" | "in_progress" | "resolved" | "closed" | "disputed";
+export type PunchListStatus = "open" | "in_progress" | "completed" | "verified" | "rejected";
+export type IncidentStatus = "reported" | "under_investigation" | "resolved" | "closed";
+export type TalkStatus = "scheduled" | "completed" | "cancelled";
+
+export interface Inspection {
+  id: string;
+  project_id: string;
+  site_id: string | null;
+  subcontractor_id: string | null;
+  inspection_number: string;
+  title: string;
+  inspection_type: string;
+  status: InspectionStatus;
+  scheduled_date: string;
+  completed_date: string | null;
+  inspector_name: string | null;
+  score: number | null;
+}
+
+export interface NCR {
+  id: string;
+  project_id: string;
+  site_id: string | null;
+  subcontractor_id: string | null;
+  ncr_number: string;
+  title: string;
+  severity: string;
+  status: NCRStatus;
+  location: string | null;
+  due_date: string | null;
+  raised_by: string | null;
+  assigned_to: string | null;
+}
+
+export interface SafetyIncident {
+  id: string;
+  project_id: string;
+  site_id: string | null;
+  subcontractor_id: string | null;
+  incident_number: string;
+  title: string;
+  severity: string;
+  status: IncidentStatus;
+  incident_date: string;
+  persons_involved: number;
+  injuries: number;
+  fatalities: number;
+}
+
+export interface PunchListItem {
+  id: string;
+  project_id: string;
+  site_id: string | null;
+  subcontractor_id: string | null;
+  item_number: string;
+  description: string;
+  location: string | null;
+  status: PunchListStatus;
+  assigned_to: string | null;
+  due_date: string | null;
+  priority: string;
+}
+
+export interface ToolboxTalk {
+  id: string;
+  project_id: string;
+  site_id: string | null;
+  subcontractor_id: string | null;
+  talk_number: string;
+  title: string;
+  topic: string;
+  description: string | null;
+  status: TalkStatus;
+  scheduled_date: string;
+  completed_date: string | null;
+  conducted_by: string | null;
+  duration_minutes: number;
+  attendees_count: number;
+  topics_covered: string | null;
+  notes: string | null;
+  is_safety_topic: boolean;
+}
+
+// ── Compliance ────────────────────────────────────────────────────
+export type ComplianceDocCategory =
+  | "license" | "tax_certificate" | "insurance"
+  | "safety_cert" | "quality_cert" | "registration" | "other";
+
+export type ComplianceDocStatus =
+  | "active" | "expiring_soon" | "expired" | "revoked" | "pending_renewal";
+
+export interface ComplianceDoc {
+  id: string;
+  project_id: string;
+  subcontractor_id: string;
+  document_number: string;
+  title: string;
+  category: ComplianceDocCategory;
+  status: ComplianceDocStatus;
+  issuing_authority: string | null;
+  reference_number: string | null;
+  issued_date: string | null;
+  expiry_date: string | null;
+  renewable: boolean;
+  reminder_days_before: number;
+  last_reminded_at: string | null;
+  description: string | null;
+  file_name: string | null;
+  file_url: string | null;
+  notes: string | null;
+  verified_by: string | null;
+  verified_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ComplianceDocSummary {
+  id: string;
+  subcontractor_id: string;
+  document_number: string;
+  title: string;
+  category: ComplianceDocCategory;
+  status: ComplianceDocStatus;
+  expiry_date: string | null;
+  created_at: string;
 }
