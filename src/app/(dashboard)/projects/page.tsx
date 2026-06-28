@@ -112,6 +112,21 @@ export default function ProjectsPage() {
             ))}
 
             <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Project type</label>
+              <select
+                className="h-9 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                {...register("project_type")}
+              >
+                <option value="residential">Residential</option>
+                <option value="commercial">Commercial</option>
+                <option value="infrastructure">Infrastructure</option>
+                <option value="industrial">Industrial</option>
+                <option value="renovation">Renovation</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Estimated budget (NPR)</label>
               <input
                 type="number"
@@ -127,6 +142,25 @@ export default function ProjectsPage() {
                 type="date"
                 className="h-9 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-gray-100 [color-scheme:light] dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 {...register("planned_start_date")}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Planned end date</label>
+              <input
+                type="date"
+                className="h-9 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-gray-100 [color-scheme:light] dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                {...register("planned_end_date")}
+              />
+            </div>
+
+            <div className="col-span-2 flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Description</label>
+              <textarea
+                rows={3}
+                placeholder="Project description..."
+                className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 resize-none"
+                {...register("description")}
               />
             </div>
 
