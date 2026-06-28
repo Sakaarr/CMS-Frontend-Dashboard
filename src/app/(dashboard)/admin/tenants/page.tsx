@@ -11,9 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
-import { Plus, Loader2, Building2, ShieldOff, ShieldCheck, Mail } from "lucide-react";
+import { Plus, Loader2, Building2, ShieldOff, ShieldCheck, Mail, ChevronDown } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
+import { apiClient } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
 
 
 const PLAN_COLORS: Record<string, string> = {
@@ -26,8 +28,10 @@ const PLAN_COLORS: Record<string, string> = {
 export default function TenantsAdminPage() {
   const { user } = useAuthStore();
   const router = useRouter();
+  const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [showCreate, setShowCreate] = useState(false);
+  const [updatingPlan, setUpdatingPlan] = useState<string | null>(null);
 
   const { data, isLoading } = useTenants(page);
   const createTenant = useCreateTenant();
@@ -35,6 +39,18 @@ export default function TenantsAdminPage() {
   const activateTenant = useActivateTenant();
   const [createError, setCreateError] = useState("");
   const { register, handleSubmit, reset } = useForm();
+
+  const changePlan = async (tenantId: string, plan: string) => {
+    setUpdatingPlan(tenantId);
+    try {
+      await apiClient.patch(`/tenants/${tenantId}`, { plan });
+      qc.invalidateQueries({ queryKey: ["tenants"] });
+    } catch (e) {
+      console.error("Failed to update plan", e);
+    } finally {
+      setUpdatingPlan(null);
+    }
+  };
 
   useEffect(() => {
     if (!user?.is_superadmin) router.replace("/overview");
@@ -97,6 +113,7 @@ export default function TenantsAdminPage() {
                   phone: d.phone || undefined,
                   pan_number: d.pan_number || undefined,
                   vat_number: d.vat_number || undefined,
+                  plan: d.plan || "free",
                   admin_full_name: d.admin_full_name,
                   admin_email: d.admin_email,
                   admin_phone: d.admin_phone || undefined,
@@ -123,6 +140,22 @@ export default function TenantsAdminPage() {
               <Input label="Phone" {...register("phone")} />
               <Input label="PAN number" {...register("pan_number")} />
               <Input label="VAT number" {...register("vat_number")} />
+              {/* Plan selector */}
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Subscription Plan
+                </label>
+                <select
+                  {...register("plan", { required: true })}
+                  defaultValue="free"
+                  className="h-10 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="free">Free</option>
+                  <option value="starter">Starter</option>
+                  <option value="professional">Professional</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
+              </div>
 
               {/* Divider */}
               <div className="col-span-full border-t border-gray-200 dark:border-gray-800 pt-4 mt-1">
@@ -178,12 +211,18 @@ export default function TenantsAdminPage() {
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t.name}</p>
                     <p className="text-xs text-gray-500">{t.slug} · {formatDate(t.created_at)}</p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${PLAN_COLORS[t.plan] ?? "bg-gray-100 text-gray-600"}`}
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={t.plan}
+                      disabled={updatingPlan === t.id}
+                      onChange={(e) => changePlan(t.id, e.target.value)}
+                      className={`text-xs px-1.5 py-1 rounded border-0 font-medium cursor-pointer focus:ring-2 focus:ring-blue-500 bg-transparent ${PLAN_COLORS[t.plan] ?? "bg-gray-100 text-gray-600"}`}
                     >
-                      {t.plan}
-                    </span>
+                      <option value="free">Free</option>
+                      <option value="starter">Starter</option>
+                      <option value="professional">Professional</option>
+                      <option value="enterprise">Enterprise</option>
+                    </select>
                     <Badge status={t.status} />
                     {t.status === "suspended" ? (
                       <Button
