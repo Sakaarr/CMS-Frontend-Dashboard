@@ -33,6 +33,8 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { label: "Overview", href: "/overview", icon: LayoutDashboard },
   { label: "Projects", href: "/projects", icon: FolderKanban },
   { label: "BOQ & Estimation", href: "/boq", icon: FileSpreadsheet, permissionKey: "can_boq" },
+  { label: "Cost Codes", href: "/cost-codes", icon: FileSpreadsheet, permissionKey: "can_boq" },
+  { label: "Rate Analysis", href: "/rate-analysis", icon: FileSpreadsheet, permissionKey: "can_boq" },
   { label: "Procurement", href: "/procurement", icon: ShoppingCart, permissionKey: "can_procurement" },
   { label: "Inventory", href: "/inventory", icon: Package, permissionKey: "can_inventory" },
   { label: "Site Operations", href: "/site-ops", icon: HardHat, permissionKey: "can_site_ops" },

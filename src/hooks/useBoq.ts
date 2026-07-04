@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import type {
   BudgetVersion, BOQItem, CostCode,
-  BOQSummary, APIResponse
+  BOQSummary, APIResponse, RateAnalysis
 } from "@/types";
 
 export function useBudgetVersions(projectId: string) {
@@ -74,7 +74,7 @@ export function useCreateBudgetVersion(projectId: string) {
 export function useCreateBOQItem(projectId: string, versionId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<BOQItem>) =>
+    mutationFn: (data: Record<string, any>) =>
       apiClient.post(
         `/projects/${projectId}/budget-versions/${versionId}/items`,
         data
@@ -111,5 +111,92 @@ export function useImportBOQItems(projectId: string, versionId: string) {
       qc.invalidateQueries({ queryKey: ["boq-items", versionId] });
       qc.invalidateQueries({ queryKey: ["boq-summary", versionId] });
     },
+  });
+}
+
+export function useUpdateBOQItem(versionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, data }: { itemId: string; data: Partial<BOQItem> }) =>
+      apiClient.patch(`/boq-items/${itemId}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["boq-items", versionId] });
+      qc.invalidateQueries({ queryKey: ["boq-summary", versionId] });
+    },
+  });
+}
+
+export function useDeleteBOQItem(versionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (itemId: string) =>
+      apiClient.delete(`/boq-items/${itemId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["boq-items", versionId] });
+      qc.invalidateQueries({ queryKey: ["boq-summary", versionId] });
+    },
+  });
+}
+
+export function useCreateCostCode() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      code: string;
+      name: string;
+      description?: string;
+      category: string;
+      unit: string;
+      standard_rate?: number;
+    }) => apiClient.post("/cost-codes", data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["cost-codes"] }),
+  });
+}
+
+export function useCreateRateAnalysis() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      cost_code_id: string;
+      name: string;
+      description?: string;
+      unit: string;
+      output_quantity?: number;
+      overhead_percentage?: number;
+      components: Array<{
+        component_type: string;
+        description: string;
+        unit: string;
+        quantity: number;
+        rate: number;
+        wastage_percentage?: number;
+      }>;
+    }) => apiClient.post("/rate-analysis", data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["rate-analyses"] }),
+  });
+}
+
+export function useCopyBudgetVersion(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ versionId, name }: { versionId: string; name?: string }) =>
+      apiClient.post(`/budget-versions/${versionId}/copy`, null, {
+        params: { name },
+      }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["budget-versions", projectId] }),
+  });
+}
+
+export function useRateAnalyses(costCodeId: string) {
+  return useQuery({
+    queryKey: ["rate-analyses", costCodeId],
+    queryFn: async () => {
+      const res = await apiClient.get<APIResponse<RateAnalysis[]>>(
+        `/cost-codes/${costCodeId}/rate-analysis`
+      );
+      return res.data.data;
+    },
+    enabled: !!costCodeId,
   });
 }

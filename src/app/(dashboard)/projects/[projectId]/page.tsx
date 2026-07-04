@@ -6,7 +6,9 @@ import {
   useProject, useUpdateProjectStatus,
   useSites, useMilestones,
   useCreateSite, useCreateMilestone, useUpdateMilestone,
+  useProjectMembers, useAddProjectMember, useRemoveProjectMember,
 } from "@/hooks/useProjects";
+import { useUsers } from "@/hooks/useUsers";
 import { useForm } from "react-hook-form";
 import { Plus } from "lucide-react";
 import { useBudgetVersions, useBOQSummary, useBOQItems } from "@/hooks/useBoq";
@@ -24,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useThemeStore } from "@/store/theme.store";
+import { useHasPermission } from "@/hooks/usePermissions";
 import {
   ArrowLeft, MapPin, Calendar, User,
   TrendingUp, CheckCircle, Loader2, Users, AlertCircle,
@@ -32,6 +35,7 @@ import Link from "next/link";
 import Chart from "chart.js/auto";
 import { Input } from "@/components/ui/input";
 import { CommentSection } from "@/components/comments/CommentSection";
+import { useAuthStore } from "@/store/auth.store";
 import {
   useProgressList, useProgressDashboard, useCreateProgress,
   useSubmitProgress, useApproveProgress, useDeleteProgress,
@@ -53,7 +57,7 @@ const TABS = [
   "Overview", "Sites", "Milestones", "BOQ",
   "Subcontractors", "Progress", "Certificates",
   "Compliance",
-  "Procurement", "Inventory", "Site Ops", "Finance", "Comments",
+  "Procurement", "Inventory", "Site Ops", "Finance", "Members", "Comments",
 ] as const;
 type Tab = typeof TABS[number];
 
@@ -707,6 +711,11 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
+      {/* ── Members tab ── */}
+      {tab === "Members" && (
+        <MembersTab projectId={project.id} />
+      )}
+
       {/* ── Comments tab ── */}
       {tab === "Comments" && (
         <CommentSection targetType="project" targetId={projectId} title="Project Comments" />
@@ -892,6 +901,7 @@ function SitesTab({ projectId }: { projectId: string }) {
 // ── Milestones sub-component ──────────────────────────────────────
 function MilestonesTab({ projectId }: { projectId: string }) {
   const { data: milestones, isLoading } = useMilestones(projectId);
+  const { data: sites } = useSites(projectId);
   const createMilestone = useCreateMilestone(projectId);
   const updateMilestone = useUpdateMilestone(projectId);
   const [showCreate, setShowCreate] = useState(false);
@@ -912,9 +922,11 @@ function MilestonesTab({ projectId }: { projectId: string }) {
       await createMilestone.mutateAsync({
         name: d.name,
         description: d.description || undefined,
+        site_id: d.site_id || undefined,
         planned_date: d.planned_date || undefined,
         sequence: parseInt(d.sequence) || 0,
         is_critical: d.is_critical === "true",
+        weight: d.weight ? parseFloat(d.weight) : undefined,
       });
       reset();
       setShowCreate(false);
@@ -953,6 +965,12 @@ function MilestonesTab({ projectId }: { projectId: string }) {
     milestones?.filter((m: any) => m.status === "completed").length ?? 0;
   const total = milestones?.length ?? 0;
 
+  const totalWeight = milestones?.reduce((sum: number, m: any) => sum + (m.weight ?? 0), 0) ?? 0;
+  const hasWeight = milestones?.some((m: any) => m.weight != null) ?? false;
+  const weightWarning = hasWeight && Math.abs(totalWeight - 100) > 0.01;
+
+  const siteMap = new Map(sites?.map((s: any) => [s.id, s.name]));
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -963,6 +981,12 @@ function MilestonesTab({ projectId }: { projectId: string }) {
           <Plus className="h-4 w-4 mr-1" /> Add milestone
         </Button>
       </div>
+
+      {weightWarning && (
+        <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+          <strong>Weight warning:</strong> Total milestone weight is {totalWeight}%. It should sum to 100%.
+        </div>
+      )}
 
       {showCreate && (
         <Card className="dark:bg-gray-900 dark:border-gray-800">
@@ -980,6 +1004,20 @@ function MilestonesTab({ projectId }: { projectId: string }) {
                 {...register("name", { required: "Required" })}
               />
               <Input label="Planned date" type="date" {...register("planned_date")} />
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                  Site
+                </label>
+                <select
+                  className="h-10 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-gray-100"
+                  {...register("site_id")}
+                >
+                  <option value="">None</option>
+                  {sites?.map((s: any) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
                   Sequence order
@@ -1002,6 +1040,20 @@ function MilestonesTab({ projectId }: { projectId: string }) {
                   <option value="false">No</option>
                   <option value="true">Yes — critical path</option>
                 </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                  Weight (%)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  placeholder="e.g. 15"
+                  className="h-10 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  {...register("weight")}
+                />
               </div>
               <div className="col-span-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
@@ -1051,10 +1103,12 @@ function MilestonesTab({ projectId }: { projectId: string }) {
                 <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-xs font-medium uppercase tracking-wide text-gray-500">
                   <th className="px-4 py-3 text-left">#</th>
                   <th className="px-4 py-3 text-left">Milestone</th>
+                  <th className="px-4 py-3 text-left">Site</th>
                   <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-right">Progress</th>
                   <th className="px-4 py-3 text-left">Planned date</th>
                   <th className="px-4 py-3 text-left">Actual date</th>
+                  <th className="px-4 py-3 text-right">Weight</th>
                   <th className="px-4 py-3 text-left">Critical</th>
                   <th className="px-4 py-3 text-left">Action</th>
                 </tr>
@@ -1067,13 +1121,21 @@ function MilestonesTab({ projectId }: { projectId: string }) {
                       m.is_critical ? "bg-red-50/30 dark:bg-red-900/10" : ""
                     }`}
                   >
-                    <td className="px-4 py-3 text-gray-500">{m.sequence}</td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{m.sequence}</td>
+                    <td className="px-4 py-3 max-w-48">
+                      <p className="font-medium text-gray-900 dark:text-gray-100 truncate" title={m.name}>
                         {m.name}
                       </p>
+                      {m.description && (
+                        <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5" title={m.description}>
+                          {m.description}
+                        </p>
+                      )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                      {m.site_id ? (siteMap.get(m.site_id) ?? "\u2014") : "\u2014"}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
                           STATUS_COLORS[m.status] ?? "bg-gray-100 text-gray-600"
@@ -1082,7 +1144,7 @@ function MilestonesTab({ projectId }: { projectId: string }) {
                         {m.status?.replace(/_/g, " ")}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
                         <div className="w-20 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
                           <div
@@ -1095,20 +1157,25 @@ function MilestonesTab({ projectId }: { projectId: string }) {
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-500">
+                    <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
                       {formatDate(m.planned_date)}
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-500">
+                    <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
                       {formatDate(m.actual_date)}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <span className={`text-sm font-semibold ${m.weight != null ? "text-gray-900 dark:text-gray-100" : "text-gray-400"}`}>
+                        {m.weight != null ? `${m.weight}%` : "\u2014"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       {m.is_critical && (
                         <span className="text-xs font-medium text-red-600 dark:text-red-400">
                           ⚡ Critical
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       {m.status !== "completed" && m.status !== "cancelled" && (
                         <Button
                           size="sm"
@@ -1135,6 +1202,148 @@ function MilestonesTab({ projectId }: { projectId: string }) {
   );
 }
 
+// ── Members sub-component ────────────────────────────────────────
+function MembersTab({ projectId }: { projectId: string }) {
+  const { data: members, isLoading } = useProjectMembers(projectId);
+  const { data: users } = useUsers();
+  const addMember = useAddProjectMember(projectId);
+  const removeMember = useRemoveProjectMember(projectId);
+  const currentUser = useAuthStore((s) => s.user);
+  const [showAdd, setShowAdd] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedRole, setSelectedRole] = useState("viewer");
+  const [addError, setAddError] = useState("");
+
+  const currentMember = members?.find((m: any) => m.user_id === currentUser?.id);
+  const canManage = currentMember?.role === "project_manager" || currentMember?.role === "company_admin";
+
+  const memberUserIds = new Set(members?.map((m: any) => m.user_id) ?? []);
+  const availableUsers = users?.filter((u: any) => !memberUserIds.has(u.id)) ?? [];
+  const userMap = new Map(users?.map((u: any) => [u.id, u]) ?? []);
+
+  const handleUserChange = (userId: string) => {
+    setSelectedUserId(userId);
+    const user = userMap.get(userId);
+    if (user?.role) setSelectedRole(user.role);
+  };
+
+  const handleAdd = async () => {
+    if (!selectedUserId) return;
+    setAddError("");
+    try {
+      await addMember.mutateAsync({ user_id: selectedUserId, role: selectedRole });
+      setSelectedUserId("");
+      setSelectedRole("viewer");
+      setShowAdd(false);
+    } catch (e: any) {
+      setAddError(e?.response?.data?.message || "Failed to add member");
+    }
+  };
+
+  const handleRemove = async (memberId: string) => {
+    try {
+      await removeMember.mutateAsync(memberId);
+    } catch (e: any) {
+      setAddError(e?.response?.data?.message || "Failed to remove member");
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+          Members ({members?.length ?? 0})
+        </h3>
+        {canManage && (
+          <Button size="sm" onClick={() => setShowAdd(!showAdd)}>
+            <Plus className="h-4 w-4 mr-1" /> Add member
+          </Button>
+        )}
+      </div>
+
+      {showAdd && (
+        <Card className="dark:bg-gray-900 dark:border-gray-800">
+          <CardContent className="pt-5">
+            <div className="grid grid-cols-3 gap-4 items-end">
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">User</label>
+                <select
+                  className="h-10 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm"
+                  value={selectedUserId}
+                  onChange={(e) => handleUserChange(e.target.value)}
+                >
+                  <option value="">Select user...</option>
+                  {availableUsers.map((u: any) => (
+                    <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Role</label>
+                <select
+                  className="h-10 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm"
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                >
+                  <option value="project_manager">Project Manager</option>
+                  <option value="site_engineer">Site Engineer</option>
+                  <option value="finance">Finance</option>
+                  <option value="procurement">Procurement</option>
+                  <option value="qa_officer">QA Officer</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+              </div>
+              <Button size="sm" onClick={handleAdd} loading={addMember.isPending}>Add</Button>
+            </div>
+            {addError && <p className="text-sm text-red-600 mt-2">{addError}</p>}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="dark:bg-gray-900 dark:border-gray-800">
+        {isLoading ? (
+          <CardContent className="flex justify-center py-10">
+            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+          </CardContent>
+        ) : !members?.length ? (
+          <CardContent className="py-10 text-center text-gray-400">No members yet</CardContent>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-xs font-medium uppercase tracking-wide text-gray-500">
+                <th className="px-4 py-3 text-left">Name</th>
+                <th className="px-4 py-3 text-left">Email</th>
+                <th className="px-4 py-3 text-left">Role</th>
+                <th className="px-4 py-3 text-left">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {members.map((m: any) => (
+                <tr key={m.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{m.user_name ?? m.user_id}</td>
+                  <td className="px-4 py-3 text-gray-500">{m.user_email ?? "\u2014"}</td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                      {m.role?.replace(/_/g, " ")}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {canManage && (
+                      <Button variant="outline" size="sm" onClick={() => handleRemove(m.id)} loading={removeMember.isPending}>
+                        Remove
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
+    </div>
+  );
+}
+
 function SubcontractorsTab({ projectId }: { projectId: string }) {
   const [showCreateContract, setShowCreateContract] = useState(false);
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
@@ -1143,6 +1352,7 @@ function SubcontractorsTab({ projectId }: { projectId: string }) {
   const [contractError, setContractError] = useState<string | null>(null);
   const [assignError, setAssignError] = useState<string | null>(null);
   const [deleteContractId, setDeleteContractId] = useState<string | null>(null);
+  const canManageSubcontractors = useHasPermission("can_subcontractors");
 
   const { data: subsData } = useSubcontractors();
   const { data: projectSubs, refetch: refetchSubs } = useProjectSubcontractors(projectId);
@@ -1221,10 +1431,12 @@ function SubcontractorsTab({ projectId }: { projectId: string }) {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           Subcontractors on this project
         </h3>
-        <Button size="sm" onClick={() => setShowCreateContract(!showCreateContract)}>
-          <Plus className="h-4 w-4 mr-1" />
-          Assign subcontractor
-        </Button>
+        {canManageSubcontractors && (
+          <Button size="sm" onClick={() => setShowCreateContract(!showCreateContract)}>
+            <Plus className="h-4 w-4 mr-1" />
+            Assign subcontractor
+          </Button>
+        )}
       </div>
 
       {showCreateContract && (
@@ -1244,7 +1456,7 @@ function SubcontractorsTab({ projectId }: { projectId: string }) {
                 </label>
                 <select
                   {...contractForm.register("subcontractor_id", { required: true })}
-                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
                 >
                   <option value="">Select...</option>
                   {subs.map((s: any) => (

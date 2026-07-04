@@ -97,14 +97,20 @@ export interface Site {
 
 export interface Milestone {
   id: string;
+  tenant_id: string;
   project_id: string;
+  site_id: string | null;
   name: string;
+  description: string | null;
   status: string;
   planned_date: string | null;
   actual_date: string | null;
   completion_percentage: number;
   is_critical: boolean;
   sequence: number;
+  weight: number | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // ── BOQ ───────────────────────────────────────────────────────────
@@ -147,9 +153,39 @@ export interface CostCode {
   id: string;
   code: string;
   name: string;
+  description: string | null;
   category: string;
   unit: string;
   standard_rate: number | null;
+  is_active: boolean;
+}
+
+export interface RateAnalysisComponent {
+  id: string;
+  component_type: "material" | "labour" | "equipment";
+  description: string;
+  unit: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+  wastage_percentage: number;
+}
+
+export interface RateAnalysis {
+  id: string;
+  cost_code_id: string;
+  name: string;
+  description: string | null;
+  unit: string;
+  output_quantity: number;
+  total_material: number;
+  total_labour: number;
+  total_equipment: number;
+  overhead_percentage: number;
+  overhead_amount: number;
+  unit_rate: number;
+  is_active: boolean;
+  components: RateAnalysisComponent[];
 }
 
 export interface BOQSummary {

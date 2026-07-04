@@ -132,6 +132,7 @@ export function useCreateMilestone(projectId: string) {
       planned_date?: string;
       sequence?: number;
       is_critical?: boolean;
+      weight?: number;
     }) => apiClient.post(`/projects/${projectId}/milestones`, data),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ["milestones", projectId] }),
@@ -146,7 +147,7 @@ export function useUpdateMilestone(projectId: string) {
       data,
     }: {
       milestoneId: string;
-      data: { completion_percentage?: number; status?: string; actual_date?: string };
+      data: { completion_percentage?: number; status?: string; actual_date?: string; weight?: number };
     }) => apiClient.patch(`/projects/${projectId}/milestones/${milestoneId}`, data),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ["milestones", projectId] }),
@@ -161,5 +162,23 @@ export function useProjectMembers(projectId: string) {
       return res.data.data;
     },
     enabled: !!projectId,
+  });
+}
+
+export function useAddProjectMember(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { user_id: string; role: string }) =>
+      apiClient.post(`/projects/${projectId}/members`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["project-members", projectId] }),
+  });
+}
+
+export function useRemoveProjectMember(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (memberId: string) =>
+      apiClient.delete(`/projects/${projectId}/members/${memberId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["project-members", projectId] }),
   });
 }
