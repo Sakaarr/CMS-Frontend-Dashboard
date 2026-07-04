@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useThemeStore } from "@/store/theme.store";
+import { useHasPermission } from "@/hooks/usePermissions";
 import {
   ArrowLeft, MapPin, Calendar, User,
   TrendingUp, CheckCircle, Loader2, Users, AlertCircle,
@@ -1351,6 +1352,7 @@ function SubcontractorsTab({ projectId }: { projectId: string }) {
   const [contractError, setContractError] = useState<string | null>(null);
   const [assignError, setAssignError] = useState<string | null>(null);
   const [deleteContractId, setDeleteContractId] = useState<string | null>(null);
+  const canManageSubcontractors = useHasPermission("can_subcontractors");
 
   const { data: subsData } = useSubcontractors();
   const { data: projectSubs, refetch: refetchSubs } = useProjectSubcontractors(projectId);
@@ -1429,10 +1431,12 @@ function SubcontractorsTab({ projectId }: { projectId: string }) {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           Subcontractors on this project
         </h3>
-        <Button size="sm" onClick={() => setShowCreateContract(!showCreateContract)}>
-          <Plus className="h-4 w-4 mr-1" />
-          Assign subcontractor
-        </Button>
+        {canManageSubcontractors && (
+          <Button size="sm" onClick={() => setShowCreateContract(!showCreateContract)}>
+            <Plus className="h-4 w-4 mr-1" />
+            Assign subcontractor
+          </Button>
+        )}
       </div>
 
       {showCreateContract && (
@@ -1452,7 +1456,7 @@ function SubcontractorsTab({ projectId }: { projectId: string }) {
                 </label>
                 <select
                   {...contractForm.register("subcontractor_id", { required: true })}
-                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
                 >
                   <option value="">Select...</option>
                   {subs.map((s: any) => (
